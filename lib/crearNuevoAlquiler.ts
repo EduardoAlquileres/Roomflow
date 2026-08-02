@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { NuevoAlquiler } from "@/types/nuevoAlquiler";
+import { generarCobrosPendientes } from "@/lib/generarCobrosPendientes";
 
 type InquilinoGuardado = { id: string };
 
@@ -214,6 +215,8 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
     .eq("id", datos.habitacionId);
 
   if (errorEstado) throw errorEstado;
+
+  await generarCobrosPendientes();
 
   return { ok: true, inquilinoId: inquilino1.id, estanciaId: estancia1.id };
 }

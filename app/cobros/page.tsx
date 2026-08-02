@@ -22,6 +22,7 @@ import CobrosTable from "@/components/CobrosTable";
 import RegistrarPagoModal from "@/components/RegistrarPagoModal";
 import HistorialCobrosModal from "@/components/HistorialCobrosModal";
 import { registrarPago } from "@/lib/movimientosCobro";
+import { generarCobrosPendientes } from "@/lib/generarCobrosPendientes";
 
 import { Cobro } from "@/types/cobro";
 import CrearCobroModal, {
@@ -74,6 +75,7 @@ type Inquilino = {
 export default function CobrosPage() {
   const [cargando, setCargando] = useState(true);
   const [vistaActiva, setVistaActiva] = useState<"RESUMEN" | "COBROS" | "GASTOS">("RESUMEN");
+  const [avisoGeneracion, setAvisoGeneracion] = useState<string | null>(null);
 
   const [resumen, setResumen] = useState<Resumen>({
     previstas: 0,
@@ -223,6 +225,14 @@ async function guardarPago(datos: {
   async function cargarDatos() {
     setCargando(true);
 
+    try {
+      const resultado = await generarCobrosPendientes();
+      setAvisoGeneracion(resultado.creados ? `Se han generado ${resultado.creados} cobro${resultado.creados === 1 ? "" : "s"} pendiente${resultado.creados === 1 ? "" : "s"} hasta el mes actual.` : null);
+    } catch (error) {
+      console.error("No se pudieron generar los cobros mensuales", error);
+      setAvisoGeneracion("No se han podido actualizar los cobros automáticos. Puedes seguir consultando los cobros ya registrados.");
+    }
+
     const listaCobros = await obtenerCobros();
 
     setCobros(listaCobros);
@@ -320,6 +330,7 @@ async function guardarPago(datos: {
       <BotonVista activa={vistaActiva === "COBROS"} onClick={() => setVistaActiva("COBROS")} icono={<ListFilter size={17} />} texto="Listado de cobros" />
       <BotonVista activa={vistaActiva === "GASTOS"} onClick={() => setVistaActiva("GASTOS")} icono={<BarChart3 size={17} />} texto="Balance de gastos" />
     </div>
+    {avisoGeneracion && <div className="mb-5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900">{avisoGeneracion}</div>}
     {vistaActiva === "RESUMEN" && (
     <>
     <div style={{ marginBottom: 16 }}>

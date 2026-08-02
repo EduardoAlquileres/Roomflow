@@ -14,6 +14,7 @@ import {
 } from "./cobros";
 import { crearEstancia } from "./estancias";
 import { registrarFianza } from "./fianzas";
+import { generarCobrosPendientes } from "./generarCobrosPendientes";
 
 import {
   Inquilino,
@@ -140,6 +141,8 @@ export async function realizarCheckIn(
     fecha_vencimiento: datos.fechaEntrada,
     observaciones: null,
   });
+
+  await generarCobrosPendientes();
 
   return {
     inquilino,
