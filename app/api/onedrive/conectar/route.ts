@@ -9,7 +9,8 @@ export async function GET(request: Request) {
   if (!clientId) return NextResponse.json({ error: "Falta configurar MICROSOFT_CLIENT_ID en Vercel." }, { status: 503 });
   const state = randomUUID();
   const retorno = urlRetornoOneDrive(new URL(request.url).origin);
-  const destino = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
+  const directorio = process.env.MICROSOFT_TENANT_ID || "common";
+  const destino = new URL(`https://login.microsoftonline.com/${directorio}/oauth2/v2.0/authorize`);
   destino.search = new URLSearchParams({ client_id: clientId, response_type: "code", redirect_uri: retorno, response_mode: "query", scope: "offline_access Files.ReadWrite", state, prompt: "consent" }).toString();
   const respuesta = NextResponse.redirect(destino);
   respuesta.cookies.set({ name: "roomflow_onedrive_state", value: state, httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 600 });
