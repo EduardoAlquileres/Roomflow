@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { supabase } from "@/lib/supabase";
 
-const MICROSOFT = "https://login.microsoftonline.com/common/oauth2/v2.0";
+const MICROSOFT = `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID || "common"}/oauth2/v2.0`;
 const GRAPH = "https://graph.microsoft.com/v1.0";
 const ID_INTEGRACION = "principal";
 
