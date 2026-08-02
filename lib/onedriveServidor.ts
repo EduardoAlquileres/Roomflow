@@ -11,7 +11,7 @@ type Registro = { access_token_cifrado: string; refresh_token_cifrado: string; e
 function configuracion() {
   const clientId = process.env.MICROSOFT_CLIENT_ID;
   const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-  const clave = process.env.ONEDRIVE_TOKEN_ENCRYPTION_KEY;
+  const clave = process.env.ONEDRIVE_TOKEN_ENCRYPTION_KEY || process.env.ROOMFLOW_ACCESS_PASSWORD;
   if (!clientId || !clientSecret || !clave) throw new Error("La conexión con OneDrive todavía no está configurada.");
   return { clientId, clientSecret, clave };
 }
