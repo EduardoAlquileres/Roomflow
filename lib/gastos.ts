@@ -7,7 +7,7 @@ export async function obtenerGastos(): Promise<Gasto[]> {
   return data ?? [];
 }
 
-export async function crearGastos(datos: Array<Omit<Gasto, "id" | "created_at" | "updated_at">>): Promise<void> {
+export async function crearGastos(datos: Array<Omit<Gasto, "id" | "created_at" | "updated_at">>): Promise<Gasto[]> {
   // La agrupación se conserva en el concepto para mantener compatibilidad con
   // instalaciones que aún no tengan las columnas opcionales de prorrateo.
   const filas = datos.map((gasto) => {
@@ -16,6 +16,7 @@ export async function crearGastos(datos: Array<Omit<Gasto, "id" | "created_at" |
     delete fila.es_prorrateado;
     return fila;
   });
-  const { error } = await supabase.from("gastos").insert(filas);
+  const { data, error } = await supabase.from("gastos").insert(filas).select();
   if (error) throw error;
+  return data ?? [];
 }
