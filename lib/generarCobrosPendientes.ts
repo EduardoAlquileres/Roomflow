@@ -1,16 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import { Cobro } from "@/types/cobro";
-import { Estancia } from "@/types/estancia";
+import { EstanciaEconomica, estanciaParaPeriodo, inicioPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
-type EstanciaActiva = Pick<Estancia, "inquilino_id" | "habitacion_id" | "fecha_entrada" | "precio" | "gastos" | "created_at">;
 type InquilinoActivo = { id: string; habitacion_id: string; fecha_entrada: string; created_at: string };
 type HabitacionEconomica = { id: string; precio: number; gastos: number };
 
-type ResultadoGeneracionCobros = {
-  creados: number;
-  desde: string | null;
-  hasta: string;
-};
+type ResultadoGeneracionCobros = { creados: number; desde: string | null; hasta: string };
 
 function fechaLocalHoy() {
   return new Date().toISOString().slice(0, 10);
@@ -21,123 +16,85 @@ function primerDiaMes(fecha: string) {
   return new Date(Date.UTC(anio, mes - 1, 1));
 }
 
-function clavePeriodo(habitacionId: string, fecha: Date) {
-  return `${habitacionId}-${fecha.getUTCFullYear()}-${fecha.getUTCMonth() + 1}`;
-}
-
 function sumarMes(fecha: Date) {
   return new Date(Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth() + 1, 1));
+}
+
+function clavePeriodo(habitacionId: string, anio: number, mes: number) {
+  return `${habitacionId}-${anio}-${mes}`;
 }
 
 function fechaVencimiento(periodo: Date, entrada: string) {
   const entradaMes = primerDiaMes(entrada);
   if (entradaMes.getTime() === periodo.getTime()) return entrada;
-  return `${periodo.getUTCFullYear()}-${String(periodo.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  return inicioPeriodo(periodo.getUTCFullYear(), periodo.getUTCMonth() + 1);
 }
 
-/**
- * Crea únicamente los meses que todavía no existen para las habitaciones con estancia activa.
- * El alquiler se cobra una vez por habitación y los gastos se multiplican por los titulares
- * que ya habían entrado en ese mes.
- */
+/** Crea solo los cobros que faltan usando el precio y la habitación vigentes en cada mes. */
 export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<ResultadoGeneracionCobros> {
-  const { data: estancias, error: errorEstancias } = await supabase
+  const { data, error: errorEstancias } = await supabase
     .from("estancias")
-    .select("inquilino_id, habitacion_id, fecha_entrada, precio, gastos, created_at")
-    .eq("estado", "ACTIVA")
+    .select("id, inquilino_id, habitacion_id, fecha_entrada, fecha_salida, precio, gastos, created_at")
     .lte("fecha_entrada", hasta)
     .order("fecha_entrada")
     .order("created_at");
   if (errorEstancias) throw errorEstancias;
 
-  const estanciasActivas = (estancias ?? []) as EstanciaActiva[];
-  const habitacionesConEstancia = new Set(estanciasActivas.map((estancia) => estancia.habitacion_id));
+  const estancias = (data ?? []) as EstanciaEconomica[];
+  const inquilinosConEstancia = new Set(estancias.map((estancia) => estancia.inquilino_id));
 
-  // Los inquilinos creados antes de implantar el historial pueden no tener todavía
-  // una estancia. Los incorporamos usando el precio y gastos actuales de su habitación.
-  const { data: inquilinos, error: errorInquilinos } = await supabase
+  // Compatibilidad con inquilinos antiguos que todavía no tenían una estancia registrada.
+  const { data: inquilinosData, error: errorInquilinos } = await supabase
     .from("inquilinos")
     .select("id, habitacion_id, fecha_entrada, created_at")
     .eq("activo", true)
-    .lte("fecha_entrada", hasta)
-    .order("fecha_entrada")
-    .order("created_at");
+    .lte("fecha_entrada", hasta);
   if (errorInquilinos) throw errorInquilinos;
 
-  const inquilinosSinEstancia = ((inquilinos ?? []) as InquilinoActivo[])
-    .filter((inquilino) => !habitacionesConEstancia.has(inquilino.habitacion_id));
+  const inquilinosSinEstancia = ((inquilinosData ?? []) as InquilinoActivo[]).filter((inquilino) => !inquilinosConEstancia.has(inquilino.id));
   const habitacionesIds = [...new Set(inquilinosSinEstancia.map((inquilino) => inquilino.habitacion_id))];
-  const { data: habitaciones, error: errorHabitaciones } = habitacionesIds.length
+  const { data: habitacionesData, error: errorHabitaciones } = habitacionesIds.length
     ? await supabase.from("habitaciones").select("id, precio, gastos").in("id", habitacionesIds)
     : { data: [], error: null };
   if (errorHabitaciones) throw errorHabitaciones;
+  const importesPorHabitacion = new Map(((habitacionesData ?? []) as HabitacionEconomica[]).map((habitacion) => [habitacion.id, habitacion]));
 
-  const importesPorHabitacion = new Map(
-    ((habitaciones ?? []) as HabitacionEconomica[]).map((habitacion) => [habitacion.id, habitacion])
-  );
-  const activas = [
-    ...estanciasActivas,
+  const todasLasEstancias: EstanciaEconomica[] = [
+    ...estancias,
     ...inquilinosSinEstancia.flatMap((inquilino) => {
       const habitacion = importesPorHabitacion.get(inquilino.habitacion_id);
-      return habitacion ? [{
-        inquilino_id: inquilino.id,
-        habitacion_id: inquilino.habitacion_id,
-        fecha_entrada: inquilino.fecha_entrada,
-        precio: habitacion.precio,
-        gastos: habitacion.gastos,
-        created_at: inquilino.created_at,
-      }] : [];
+      return habitacion ? [{ id: `legado-${inquilino.id}`, inquilino_id: inquilino.id, habitacion_id: inquilino.habitacion_id, fecha_entrada: inquilino.fecha_entrada, fecha_salida: null, precio: habitacion.precio, gastos: habitacion.gastos, created_at: inquilino.created_at }] : [];
     }),
   ];
-  if (!activas.length) return { creados: 0, desde: null, hasta };
+  if (!todasLasEstancias.length) return { creados: 0, desde: null, hasta };
 
   const { data: cobrosExistentes, error: errorCobros } = await supabase
     .from("cobros")
     .select("habitacion_id, periodo_anio, periodo_mes");
   if (errorCobros) throw errorCobros;
-
-  const existentes = new Set(
-    (cobrosExistentes ?? []).map((cobro) => `${cobro.habitacion_id}-${cobro.periodo_anio}-${cobro.periodo_mes}`)
-  );
-  const porHabitacion = new Map<string, EstanciaActiva[]>();
-  for (const estancia of activas) {
-    const grupo = porHabitacion.get(estancia.habitacion_id) ?? [];
-    grupo.push(estancia);
-    porHabitacion.set(estancia.habitacion_id, grupo);
-  }
+  const existentes = new Set((cobrosExistentes ?? []).map((cobro) => clavePeriodo(cobro.habitacion_id, cobro.periodo_anio, cobro.periodo_mes)));
 
   const limite = primerDiaMes(hasta);
+  const inquilinos = [...new Set(todasLasEstancias.map((estancia) => estancia.inquilino_id))];
   const nuevos: Omit<Cobro, "id" | "created_at">[] = [];
   let primerPeriodo: string | null = null;
 
-  for (const [habitacionId, ocupantes] of porHabitacion) {
-    const titular = ocupantes[0];
-    for (let periodo = primerDiaMes(titular.fecha_entrada); periodo <= limite; periodo = sumarMes(periodo)) {
-      const clave = clavePeriodo(habitacionId, periodo);
-      if (existentes.has(clave)) continue;
-
-      const ocupantesEnMes = ocupantes.filter((ocupante) => primerDiaMes(ocupante.fecha_entrada) <= periodo).length;
-      if (!ocupantesEnMes) continue;
-
-      const alquiler = Number(titular.precio);
-      const gastos = Number(titular.gastos) * ocupantesEnMes;
-      const total = alquiler + gastos;
+  for (const inquilinoId of inquilinos) {
+    const estanciasInquilino = todasLasEstancias.filter((estancia) => estancia.inquilino_id === inquilinoId);
+    const primeraEntrada = estanciasInquilino.reduce((menor, estancia) => estancia.fecha_entrada < menor ? estancia.fecha_entrada : menor, estanciasInquilino[0].fecha_entrada);
+    for (let periodo = primerDiaMes(primeraEntrada); periodo <= limite; periodo = sumarMes(periodo)) {
       const anio = periodo.getUTCFullYear();
       const mes = periodo.getUTCMonth() + 1;
-      nuevos.push({
-        habitacion_id: habitacionId,
-        inquilino_id: titular.inquilino_id,
-        periodo_anio: anio,
-        periodo_mes: mes,
-        alquiler,
-        gastos,
-        total,
-        pagado: 0,
-        pendiente: total,
-        estado: "PENDIENTE",
-        fecha_vencimiento: fechaVencimiento(periodo, titular.fecha_entrada),
-        observaciones: "Cobro mensual generado automáticamente.",
-      });
+      const estancia = estanciaParaPeriodo(todasLasEstancias, inquilinoId, anio, mes);
+      if (!estancia) continue;
+      const clave = clavePeriodo(estancia.habitacion_id, anio, mes);
+      if (existentes.has(clave)) continue;
+
+      const personas = Math.max(1, personasEnHabitacionPeriodo(todasLasEstancias, estancia.habitacion_id, anio, mes));
+      const alquiler = Number(estancia.precio);
+      const gastos = Number(estancia.gastos) * personas;
+      const total = alquiler + gastos;
+      nuevos.push({ habitacion_id: estancia.habitacion_id, inquilino_id: estancia.inquilino_id, periodo_mes: mes, periodo_anio: anio, alquiler, gastos, total, pagado: 0, pendiente: total, estado: "PENDIENTE", fecha_vencimiento: fechaVencimiento(periodo, estancia.fecha_entrada), observaciones: "Cobro mensual generado automáticamente según la estancia del periodo." });
       existentes.add(clave);
       const etiqueta = `${anio}-${String(mes).padStart(2, "0")}`;
       if (!primerPeriodo || etiqueta < primerPeriodo) primerPeriodo = etiqueta;
@@ -148,6 +105,5 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
     const { error } = await supabase.from("cobros").insert(nuevos);
     if (error) throw error;
   }
-
   return { creados: nuevos.length, desde: primerPeriodo, hasta };
 }

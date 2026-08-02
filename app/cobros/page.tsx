@@ -23,6 +23,7 @@ import RegistrarPagoModal from "@/components/RegistrarPagoModal";
 import HistorialCobrosModal from "@/components/HistorialCobrosModal";
 import { registrarPago } from "@/lib/movimientosCobro";
 import { generarCobrosPendientes } from "@/lib/generarCobrosPendientes";
+import { sincronizarCobrosHistoricos } from "@/lib/sincronizarCobrosHistoricos";
 
 import { Cobro } from "@/types/cobro";
 import CrearCobroModal, {
@@ -225,13 +226,22 @@ async function guardarPago(datos: {
   async function cargarDatos() {
     setCargando(true);
 
+    const avisos: string[] = [];
     try {
       const resultado = await generarCobrosPendientes();
-      setAvisoGeneracion(resultado.creados ? `Se han generado ${resultado.creados} cobro${resultado.creados === 1 ? "" : "s"} pendiente${resultado.creados === 1 ? "" : "s"} hasta el mes actual.` : null);
+      if (resultado.creados) avisos.push(`Se han generado ${resultado.creados} cobro${resultado.creados === 1 ? "" : "s"} pendiente${resultado.creados === 1 ? "" : "s"} hasta el mes actual.`);
     } catch (error) {
       console.error("No se pudieron generar los cobros mensuales", error);
-      setAvisoGeneracion("No se han podido actualizar los cobros automáticos. Puedes seguir consultando los cobros ya registrados.");
+      avisos.push("No se han podido generar los cobros automáticos.");
     }
+    try {
+      const resultado = await sincronizarCobrosHistoricos();
+      if (resultado.actualizados) avisos.push(`Se han ajustado ${resultado.actualizados} cobro${resultado.actualizados === 1 ? "" : "s"} a su estancia histórica.`);
+    } catch (error) {
+      console.error("No se pudieron sincronizar los cobros históricos", error);
+      avisos.push("No se han podido ajustar los cobros históricos.");
+    }
+    setAvisoGeneracion(avisos.length ? avisos.join(" ") : null);
 
     const listaCobros = await obtenerCobros();
 
