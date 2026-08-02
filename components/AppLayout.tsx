@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
@@ -8,6 +9,9 @@ type Props = { children: ReactNode };
 
 export default function AppLayout({ children }: Props) {
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const pathname = usePathname();
+
+  if (pathname === "/acceso") return <>{children}</>;
 
   return (
     <div className="rf-shell">

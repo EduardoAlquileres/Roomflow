@@ -12,6 +12,7 @@ import {
   MessageSquare,
   LayoutDashboard,
   Menu,
+  LogOut,
 } from "lucide-react";
 
 export default function Header({ alAbrirMenu }: { alAbrirMenu: () => void }) {
@@ -70,6 +71,11 @@ export default function Header({ alAbrirMenu }: { alAbrirMenu: () => void }) {
   }
 
   const pagina = getTitulo();
+
+  async function salir() {
+    await fetch("/api/acceso", { method: "DELETE" });
+    window.location.assign("/acceso");
+  }
 
   return (
     <header className="rf-header"
@@ -175,6 +181,8 @@ export default function Header({ alAbrirMenu }: { alAbrirMenu: () => void }) {
         >
           <Bell size={20} />
         </button>
+
+        <button className="rf-logout" type="button" onClick={salir} title="Cerrar sesión" aria-label="Cerrar sesión"><LogOut size={19} /></button>
 
         <div className="rf-avatar"
           style={{
