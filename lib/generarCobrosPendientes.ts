@@ -3,6 +3,8 @@ import { Cobro } from "@/types/cobro";
 import { Estancia } from "@/types/estancia";
 
 type EstanciaActiva = Pick<Estancia, "inquilino_id" | "habitacion_id" | "fecha_entrada" | "precio" | "gastos" | "created_at">;
+type InquilinoActivo = { id: string; habitacion_id: string; fecha_entrada: string; created_at: string };
+type HabitacionEconomica = { id: string; precio: number; gastos: number };
 
 type ResultadoGeneracionCobros = {
   creados: number;
@@ -48,7 +50,45 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
     .order("created_at");
   if (errorEstancias) throw errorEstancias;
 
-  const activas = (estancias ?? []) as EstanciaActiva[];
+  const estanciasActivas = (estancias ?? []) as EstanciaActiva[];
+  const habitacionesConEstancia = new Set(estanciasActivas.map((estancia) => estancia.habitacion_id));
+
+  // Los inquilinos creados antes de implantar el historial pueden no tener todavía
+  // una estancia. Los incorporamos usando el precio y gastos actuales de su habitación.
+  const { data: inquilinos, error: errorInquilinos } = await supabase
+    .from("inquilinos")
+    .select("id, habitacion_id, fecha_entrada, created_at")
+    .eq("activo", true)
+    .lte("fecha_entrada", hasta)
+    .order("fecha_entrada")
+    .order("created_at");
+  if (errorInquilinos) throw errorInquilinos;
+
+  const inquilinosSinEstancia = ((inquilinos ?? []) as InquilinoActivo[])
+    .filter((inquilino) => !habitacionesConEstancia.has(inquilino.habitacion_id));
+  const habitacionesIds = [...new Set(inquilinosSinEstancia.map((inquilino) => inquilino.habitacion_id))];
+  const { data: habitaciones, error: errorHabitaciones } = habitacionesIds.length
+    ? await supabase.from("habitaciones").select("id, precio, gastos").in("id", habitacionesIds)
+    : { data: [], error: null };
+  if (errorHabitaciones) throw errorHabitaciones;
+
+  const importesPorHabitacion = new Map(
+    ((habitaciones ?? []) as HabitacionEconomica[]).map((habitacion) => [habitacion.id, habitacion])
+  );
+  const activas = [
+    ...estanciasActivas,
+    ...inquilinosSinEstancia.flatMap((inquilino) => {
+      const habitacion = importesPorHabitacion.get(inquilino.habitacion_id);
+      return habitacion ? [{
+        inquilino_id: inquilino.id,
+        habitacion_id: inquilino.habitacion_id,
+        fecha_entrada: inquilino.fecha_entrada,
+        precio: habitacion.precio,
+        gastos: habitacion.gastos,
+        created_at: inquilino.created_at,
+      }] : [];
+    }),
+  ];
   if (!activas.length) return { creados: 0, desde: null, hasta };
 
   const { data: cobrosExistentes, error: errorCobros } = await supabase
