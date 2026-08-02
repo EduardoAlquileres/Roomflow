@@ -6,6 +6,9 @@ import {
   Euro,
   AlertTriangle,
   CheckCircle2,
+  LayoutDashboard,
+  ListFilter,
+  BarChart3,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -70,6 +73,7 @@ type Inquilino = {
 
 export default function CobrosPage() {
   const [cargando, setCargando] = useState(true);
+  const [vistaActiva, setVistaActiva] = useState<"RESUMEN" | "COBROS" | "GASTOS">("RESUMEN");
 
   const [resumen, setResumen] = useState<Resumen>({
     previstas: 0,
@@ -311,6 +315,13 @@ async function guardarPago(datos: {
   <p>Cargando...</p>
 ) : (
   <>
+    <div className="mb-6 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+      <BotonVista activa={vistaActiva === "RESUMEN"} onClick={() => setVistaActiva("RESUMEN")} icono={<LayoutDashboard size={17} />} texto="Resumen" />
+      <BotonVista activa={vistaActiva === "COBROS"} onClick={() => setVistaActiva("COBROS")} icono={<ListFilter size={17} />} texto="Listado de cobros" />
+      <BotonVista activa={vistaActiva === "GASTOS"} onClick={() => setVistaActiva("GASTOS")} icono={<BarChart3 size={17} />} texto="Balance de gastos" />
+    </div>
+    {vistaActiva === "RESUMEN" && (
+    <>
     <div style={{ marginBottom: 16 }}>
       <h2 style={{ margin: 0, fontSize: 20 }}>Mes en curso · {new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date())}</h2>
       <p style={{ margin: "6px 0 0", color: "#64748b" }}>Situación de los cobros emitidos este mes.</p>
@@ -401,6 +412,14 @@ async function guardarPago(datos: {
 />
     </div>
 
+    </>
+    )}
+
+   {vistaActiva === "COBROS" && <>
+   <div style={{ marginBottom: 16 }}>
+     <h2 style={{ margin: 0, fontSize: 20 }}>Listado de cobros</h2>
+     <p style={{ margin: "6px 0 0", color: "#64748b" }}>Gestiona pagos, recibos, historial y correcciones de cada habitación.</p>
+   </div>
    <CobrosTable
   cobros={cobros}
   habitaciones={habitaciones}
@@ -419,7 +438,8 @@ async function guardarPago(datos: {
   }}
   onEliminar={eliminarCobroSeleccionado}
 />
-  <BalanceGastosViviendas cobros={cobros} gastos={gastosVivienda} habitaciones={habitaciones} viviendas={viviendas} />
+   </>}
+   {vistaActiva === "GASTOS" && <BalanceGastosViviendas cobros={cobros} gastos={gastosVivienda} habitaciones={habitaciones} viviendas={viviendas} />}
   </>
 )}
 
@@ -509,5 +529,18 @@ function Tarjeta({
         {valor}
       </div>
     </div>
+  );
+}
+
+function BotonVista({ activa, onClick, icono, texto }: { activa: boolean; onClick: () => void; icono: React.ReactNode; texto: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${activa ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}
+    >
+      {icono}
+      {texto}
+    </button>
   );
 }
