@@ -1,43 +1,35 @@
-import { supabase } from "@/lib/supabase";
-
-const BUCKET_DOCUMENTOS_GASTO = "documentos-gastos";
-const MAX_TAMANO = 10 * 1024 * 1024;
+const MAX_TAMANO = 25 * 1024 * 1024;
 
 function validarArchivo(archivo: File) {
-  const esImagen = archivo.type.startsWith("image/");
-  const esPdf = archivo.type === "application/pdf";
-  if (!esImagen && !esPdf) throw new Error("Adjunta una imagen o un PDF.");
-  if (archivo.size > MAX_TAMANO) throw new Error("El documento no puede superar 10 MB.");
+  if (!archivo.type.startsWith("image/") && archivo.type !== "application/pdf") throw new Error("Adjunta una imagen o un PDF.");
+  if (archivo.size > MAX_TAMANO) throw new Error("El documento no puede superar 25 MB.");
+}
+
+async function respuestaJson(respuesta: Response) {
+  const datos = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw new Error(datos.error || "No se pudo gestionar el documento.");
+  return datos;
 }
 
 export async function subirDocumentoGasto(gastoId: string, archivo: File): Promise<string> {
   validarArchivo(archivo);
-  const nombreSeguro = archivo.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const ruta = `${gastoId}/${crypto.randomUUID()}-${nombreSeguro}`;
-
-  const { error: errorSubida } = await supabase.storage
-    .from(BUCKET_DOCUMENTOS_GASTO)
-    .upload(ruta, archivo, { contentType: archivo.type, upsert: false });
-  if (errorSubida) throw errorSubida;
-
-  const { error: errorGasto } = await supabase.from("gastos").update({ documento: ruta }).eq("id", gastoId);
-  if (errorGasto) {
-    await supabase.storage.from(BUCKET_DOCUMENTOS_GASTO).remove([ruta]);
-    throw errorGasto;
+  const inicio = await respuestaJson(await fetch("/api/documentos-gastos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gastoId, nombre: archivo.name }) }));
+  const tamanoBloque = 5 * 320 * 1024;
+  let ultimo: { id?: string } = {};
+  for (let desde = 0; desde < archivo.size; desde += tamanoBloque) {
+    const hasta = Math.min(desde + tamanoBloque, archivo.size);
+    const respuesta = await fetch(inicio.uploadUrl, { method: "PUT", headers: { "Content-Range": `bytes ${desde}-${hasta - 1}/${archivo.size}` }, body: archivo.slice(desde, hasta) });
+    ultimo = await respuestaJson(respuesta);
   }
-
-  return ruta;
+  if (!ultimo.id) throw new Error("OneDrive no confirmó la subida del documento.");
+  const confirmado = await respuestaJson(await fetch("/api/documentos-gastos", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gastoId, itemId: ultimo.id }) }));
+  return confirmado.documento;
 }
 
-export async function abrirDocumentoGasto(ruta: string): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from(BUCKET_DOCUMENTOS_GASTO)
-    .createSignedUrl(ruta, 60 * 10);
-  if (error) throw error;
-  return data.signedUrl;
+export async function abrirDocumentoGasto(documento: string): Promise<string> {
+  return (await respuestaJson(await fetch(`/api/documentos-gastos?documento=${encodeURIComponent(documento)}`))).url;
 }
 
-export async function eliminarDocumentoGasto(ruta: string): Promise<void> {
-  const { error } = await supabase.storage.from(BUCKET_DOCUMENTOS_GASTO).remove([ruta]);
-  if (error) throw error;
+export async function eliminarDocumentoGasto(documento: string): Promise<void> {
+  await respuestaJson(await fetch("/api/documentos-gastos", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ documento }) }));
 }
