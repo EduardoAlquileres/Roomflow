@@ -44,7 +44,7 @@ async function guardarTokens(tokens: Tokens) {
     expira_en: new Date(Date.now() + Math.max(tokens.expires_in - 120, 60) * 1000).toISOString(),
     updated_at: new Date().toISOString(),
   }, { onConflict: "id" });
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 }
 
 export async function conectarOneDrive(codigo: string, retorno: string) {
@@ -58,7 +58,7 @@ export async function conectarOneDrive(codigo: string, retorno: string) {
 
 async function tokenAcceso() {
   const { data, error } = await supabase.from("integracion_onedrive").select("access_token_cifrado, refresh_token_cifrado, expira_en").eq("id", ID_INTEGRACION).maybeSingle<Registro>();
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   if (!data) throw new Error("Conecta OneDrive antes de adjuntar documentos.");
   const { clientId, clientSecret, clave } = configuracion();
   if (new Date(data.expira_en).getTime() > Date.now()) return descifrar(data.access_token_cifrado, clave);
