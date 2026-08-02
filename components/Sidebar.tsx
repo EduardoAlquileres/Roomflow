@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ShieldCheck,
   ReceiptText,
+  FileSignature,
   X,
 } from "lucide-react";
 
@@ -50,6 +51,11 @@ const menu = [
     name: "Gastos",
     href: "/gastos",
     icon: ReceiptText,
+  },
+  {
+    name: "Contratos",
+    href: "/contratos",
+    icon: FileSignature,
   },
   {
     name: "Mensajes",

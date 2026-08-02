@@ -8,6 +8,7 @@ import CheckOutForm from "@/components/CheckOutForm";
 import EditarCheckInForm from "@/components/EditarCheckInForm";
 import AnularCheckInButton from "@/components/AnularCheckInButton";
 import DocumentoReservaButton from "@/components/DocumentoReservaButton";
+import DocumentoContratoButton from "@/components/DocumentoContratoButton";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -139,6 +140,7 @@ export default async function HabitacionPage({
               </div>
 
               {habitacion.estado === "RESERVADA" && <DocumentoReservaButton habitacionId={habitacion.id} />}
+              <DocumentoContratoButton habitacionId={habitacion.id} />
 
               <CheckOutForm
                 inquilinoId={inquilino.id}

@@ -5,3 +5,4 @@ export * from "./estancia";
 export * from "./cobro";
 export * from "./documento-inquilino";
 export * from "./fianza";
+export * from "./clausula-contrato";
