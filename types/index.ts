@@ -6,3 +6,4 @@ export * from "./cobro";
 export * from "./documento-inquilino";
 export * from "./fianza";
 export * from "./clausula-contrato";
+export * from "./mensaje-red";
