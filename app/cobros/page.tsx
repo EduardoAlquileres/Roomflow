@@ -305,14 +305,7 @@ async function guardarPago(datos: {
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          marginBottom: 30,
-        }}
-      >
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:gap-4">
         <Wallet size={34} color="#2563eb" />
 
         <div>
@@ -331,16 +324,7 @@ async function guardarPago(datos: {
         <button
           type="button"
           onClick={() => setModalNuevoCobroAbierto(true)}
-          style={{
-            marginLeft: "auto",
-            padding: "10px 16px",
-            border: "none",
-            borderRadius: 8,
-            background: "#2563eb",
-            color: "#fff",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white sm:ml-auto sm:w-auto"
         >
           + Nuevo cobro
         </button>
@@ -350,7 +334,7 @@ async function guardarPago(datos: {
   <p>Cargando...</p>
 ) : (
   <>
-    <div className="mb-6 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+    <div className="mb-6 flex gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
       <BotonVista activa={vistaActiva === "RESUMEN"} onClick={() => setVistaActiva("RESUMEN")} icono={<LayoutDashboard size={17} />} texto="Resumen" />
       <BotonVista activa={vistaActiva === "COBROS"} onClick={() => setVistaActiva("COBROS")} icono={<ListFilter size={17} />} texto="Listado de cobros" />
       <BotonVista activa={vistaActiva === "GASTOS"} onClick={() => setVistaActiva("GASTOS")} icono={<BarChart3 size={17} />} texto="Balance de gastos" />
@@ -457,7 +441,7 @@ async function guardarPago(datos: {
      <p style={{ margin: "6px 0 0", color: "#64748b" }}>Gestiona pagos, recibos, historial y correcciones de cada habitación.</p>
    </div>
    <div className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-     <label className="flex min-w-52 flex-1 flex-col gap-1 text-sm font-medium text-slate-700">
+     <label className="flex min-w-52 flex-1 flex-col gap-1 text-sm font-medium text-slate-700 max-sm:min-w-0 max-sm:flex-none max-sm:w-full">
        Vivienda
        <select
          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 outline-none focus:border-blue-500"
@@ -473,7 +457,7 @@ async function guardarPago(datos: {
          ))}
        </select>
      </label>
-     <label className="flex min-w-44 flex-1 flex-col gap-1 text-sm font-medium text-slate-700">
+     <label className="flex min-w-44 flex-1 flex-col gap-1 text-sm font-medium text-slate-700 max-sm:min-w-0 max-sm:flex-none max-sm:w-full">
        Habitaci{"\u00f3"}n
        <select
          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
@@ -487,7 +471,7 @@ async function guardarPago(datos: {
          ))}
        </select>
      </label>
-     <label className="flex min-w-44 flex-1 flex-col gap-1 text-sm font-medium text-slate-700">
+     <label className="flex min-w-44 flex-1 flex-col gap-1 text-sm font-medium text-slate-700 max-sm:min-w-0 max-sm:flex-none max-sm:w-full">
        Estado
        <select
          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 outline-none focus:border-blue-500"
@@ -500,7 +484,7 @@ async function guardarPago(datos: {
          <option value="PAGADO">Pagado</option>
        </select>
      </label>
-     <div className="flex items-center gap-3 pb-1 text-sm text-slate-500">
+     <div className="flex w-full items-center gap-3 pb-1 text-sm text-slate-500 sm:w-auto">
        <span>{cobrosFiltrados.length} {cobrosFiltrados.length === 1 ? "cobro" : "cobros"}</span>
        {(filtroVivienda || filtroHabitacion || filtroEstado) && (
          <button
