@@ -42,6 +42,7 @@ export default async function FianzasPage() {
   const porRevisar = filtrar("PENDIENTE_REVISION");
   const devueltas = filtrar("DEVUELTA");
   const retenidas = filtrar("RETENIDA");
+  const fianzasPendientes = [...enDeposito, ...porRevisar];
   const total = (items: typeof fianzas, campo: "importe" | "importe_devuelto" | "importe_retenido" = "importe") =>
     items.reduce((suma, item) => suma + Number(item[campo]), 0);
   const totalEntregado = (items: typeof fianzas) =>
@@ -56,18 +57,21 @@ export default async function FianzasPage() {
 
   const fianzasPorVivienda = viviendas
     .map((vivienda) => {
-      const fianzasVivienda = enDeposito.filter(
+      const fianzasVivienda = fianzasPendientes.filter(
         (fianza) => habitaciones.find((habitacion) => habitacion.id === fianza.habitacion_id)?.vivienda_id === vivienda.id
       );
+      const enDepositoVivienda = fianzasVivienda.filter((fianza) => fianza.estado === "COBRADA");
+      const porRevisarVivienda = fianzasVivienda.filter((fianza) => fianza.estado === "PENDIENTE_REVISION");
 
       return {
         id: vivienda.id,
         nombre: vivienda.nombre,
-        cantidad: fianzasVivienda.length,
-        importe: totalEntregado(fianzasVivienda),
+        enDeposito: totalEntregado(enDepositoVivienda),
+        porRevisar: totalEntregado(porRevisarVivienda),
+        total: totalEntregado(fianzasVivienda),
       };
     })
-    .filter((vivienda) => vivienda.cantidad > 0);
+    .filter((vivienda) => vivienda.total > 0);
 
   return (
     <div>
@@ -93,34 +97,37 @@ export default async function FianzasPage() {
         <div className="flex items-center gap-3 border-b border-slate-200 p-5">
           <div className="rounded-lg bg-blue-100 p-2 text-blue-600"><CircleDollarSign size={21} /></div>
           <div>
-            <h2 className="font-bold text-slate-900">Fianzas en dep{"\u00f3"}sito por vivienda</h2>
-            <p className="text-sm text-slate-500">Importe actualmente custodiado, sin incluir fianzas devueltas ni retenidas.</p>
+            <h2 className="font-bold text-slate-900">Fianzas pendientes por vivienda</h2>
+            <p className="text-sm text-slate-500">Incluye las fianzas en dep{"\u00f3"}sito y las hist{"\u00f3"}ricas pendientes de revisar; excluye devueltas y retenidas.</p>
           </div>
         </div>
         {fianzasPorVivienda.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">No hay fianzas en dep{"\u00f3"}sito actualmente.</p>
+          <p className="p-6 text-sm text-slate-500">No hay fianzas pendientes actualmente.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-left">
+            <table className="w-full min-w-[680px] text-left">
               <thead className="bg-slate-50 text-sm text-slate-600">
                 <tr>
                   <th className="px-5 py-4 font-semibold">Vivienda</th>
-                  <th className="px-5 py-4 text-center font-semibold">Fianzas</th>
-                  <th className="px-5 py-4 text-right font-semibold">Total en dep{"\u00f3"}sito</th>
+                  <th className="px-5 py-4 text-right font-semibold">En dep{"\u00f3"}sito</th>
+                  <th className="px-5 py-4 text-right font-semibold">Por revisar</th>
+                  <th className="px-5 py-4 text-right font-semibold">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {fianzasPorVivienda.map((vivienda) => (
                   <tr key={vivienda.id} className="border-t border-slate-100">
                     <td className="px-5 py-4 font-semibold text-slate-900">{vivienda.nombre}</td>
-                    <td className="px-5 py-4 text-center text-slate-600">{vivienda.cantidad}</td>
-                    <td className="px-5 py-4 text-right font-bold text-slate-900">{moneda.format(vivienda.importe)}</td>
+                    <td className="px-5 py-4 text-right text-slate-700">{moneda.format(vivienda.enDeposito)}</td>
+                    <td className="px-5 py-4 text-right text-violet-700">{moneda.format(vivienda.porRevisar)}</td>
+                    <td className="px-5 py-4 text-right font-bold text-slate-900">{moneda.format(vivienda.total)}</td>
                   </tr>
                 ))}
                 <tr className="border-t-2 border-blue-100 bg-blue-50">
                   <td className="px-5 py-4 font-bold text-slate-900">Total general</td>
-                  <td className="px-5 py-4 text-center font-bold text-slate-700">{enDeposito.length}</td>
-                  <td className="px-5 py-4 text-right text-lg font-bold text-blue-700">{moneda.format(totalEntregado(enDeposito))}</td>
+                  <td className="px-5 py-4 text-right font-bold text-blue-700">{moneda.format(totalEntregado(enDeposito))}</td>
+                  <td className="px-5 py-4 text-right font-bold text-violet-700">{moneda.format(totalEntregado(porRevisar))}</td>
+                  <td className="px-5 py-4 text-right text-lg font-bold text-blue-700">{moneda.format(totalEntregado(fianzasPendientes))}</td>
                 </tr>
               </tbody>
             </table>
