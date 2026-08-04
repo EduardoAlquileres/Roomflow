@@ -35,6 +35,8 @@ export default function HabitacionesPage() {
   const [habitaciones, setHabitaciones] = useState<Habitacion[]>([]);
   const [viviendas, setViviendas] = useState<Vivienda[]>([]);
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
+  const [filtroVivienda, setFiltroVivienda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState<"" | Habitacion["estado"]>("");
 
   const [formularioAbierto, setFormularioAbierto] =
     useState(false);
@@ -119,6 +121,12 @@ export default function HabitacionesPage() {
 
     await cargarDatos();
   }
+  const habitacionesFiltradas = habitaciones.filter((habitacion) => {
+    if (filtroVivienda && habitacion.vivienda_id !== filtroVivienda) return false;
+    if (filtroEstado && habitacion.estado !== filtroEstado) return false;
+
+    return true;
+  });
     const ocupantes = inquilinos
     .filter((inquilino) => inquilino.activo)
     .map((inquilino) => ({
@@ -154,8 +162,52 @@ export default function HabitacionesPage() {
         </button>
       </div>
 
+      <div className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <label className="flex min-w-52 flex-1 flex-col gap-1 text-sm font-medium text-slate-700">
+          Vivienda
+          <select
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 outline-none focus:border-blue-500"
+            value={filtroVivienda}
+            onChange={(event) => setFiltroVivienda(event.target.value)}
+          >
+            <option value="">Todas las viviendas</option>
+            {viviendas.map((vivienda) => (
+              <option key={vivienda.id} value={vivienda.id}>{vivienda.nombre}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-w-44 flex-1 flex-col gap-1 text-sm font-medium text-slate-700">
+          Estado
+          <select
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 outline-none focus:border-blue-500"
+            value={filtroEstado}
+            onChange={(event) => setFiltroEstado(event.target.value as "" | Habitacion["estado"])}
+          >
+            <option value="">Todos los estados</option>
+            <option value="LIBRE">Libre</option>
+            <option value="OCUPADA">Ocupada</option>
+            <option value="RESERVADA">Reservada</option>
+          </select>
+        </label>
+        <div className="flex items-center gap-3 pb-1 text-sm text-slate-500">
+          <span>{habitacionesFiltradas.length} {habitacionesFiltradas.length === 1 ? <>habitaci{"\u00f3"}n</> : "habitaciones"}</span>
+          {(filtroVivienda || filtroEstado) && (
+            <button
+              type="button"
+              className="font-medium text-blue-600 hover:text-blue-800"
+              onClick={() => {
+                setFiltroVivienda("");
+                setFiltroEstado("");
+              }}
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      </div>
+
       <HabitacionTable
-        habitaciones={habitaciones}
+        habitaciones={habitacionesFiltradas}
         viviendas={viviendas}
         ocupantes={ocupantes}
         onEditar={(habitacion) => {
