@@ -62,7 +62,7 @@ export default function FianzaCuotasPanel({ fianzaId, importeTotal, entregado, f
       const { error } = await supabase.from("fianza_cuotas").insert(nuevasCuotas);
       if (error) throw error;
       router.refresh();
-    } catch (error) { alert(error instanceof Error ? error.message : "No se pudo crear el plan."); } finally { setGuardando(false); }
+    } catch (error) { alert(typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : error instanceof Error ? error.message : "No se pudo crear el plan."); } finally { setGuardando(false); }
   }
 
   if (cuotas.length === 0) return <button type="button" disabled={guardando} onClick={crearPlanInicial} className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50">Crear plan de cuotas</button>;
