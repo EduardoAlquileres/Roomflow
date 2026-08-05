@@ -1,4 +1,4 @@
-import { Fianza } from "@/types";
+import { CuotaFianza, Fianza } from "@/types";
 import { supabase } from "./supabase";
 
 export async function obtenerFianzas(): Promise<Fianza[]> {
@@ -8,6 +8,15 @@ export async function obtenerFianzas(): Promise<Fianza[]> {
     .order("fecha_cobro", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+export async function obtenerCuotasFianzas(): Promise<CuotaFianza[]> {
+  const { data, error } = await supabase.from("fianza_cuotas").select("*").order("fecha_prevista");
+  if (error) {
+    if (error.code === "PGRST205" || error.code === "42P01") return [];
+    throw error;
+  }
+  return (data ?? []) as CuotaFianza[];
 }
 
 export async function registrarFianza(fianza: Omit<Fianza, "id" | "created_at" | "fecha_resolucion" | "estado" | "importe_devuelto" | "importe_retenido" | "motivo_retencion" | "importe_entregado"> & { importe_entregado?: number }): Promise<Fianza> {

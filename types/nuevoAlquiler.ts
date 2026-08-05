@@ -21,6 +21,8 @@ export interface NuevoAlquiler {
   alquiler: number;
   gastos: number;
   fianza: number;
+  importeFianzaInicial: number;
+  numeroCuotasFianza: number;
   importeReserva: number;
   metodoPago: string;
   observaciones: string;
@@ -38,6 +40,8 @@ export const nuevoAlquilerInicial: NuevoAlquiler = {
   alquiler: 0,
   gastos: 0,
   fianza: 0,
+  importeFianzaInicial: 0,
+  numeroCuotasFianza: 2,
   importeReserva: 0,
   metodoPago: "",
   observaciones: "",

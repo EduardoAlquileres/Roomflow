@@ -1,9 +1,10 @@
 import { BanknoteArrowDown, CircleDollarSign, ShieldCheck, ShieldX } from "lucide-react";
 import { ReactNode } from "react";
-import { obtenerFianzas } from "@/lib/fianzas";
+import { obtenerCuotasFianzas, obtenerFianzas } from "@/lib/fianzas";
 import { obtenerHabitaciones } from "@/lib/habitaciones";
 import { obtenerInquilinos } from "@/lib/inquilinos";
 import { obtenerViviendas } from "@/lib/viviendas";
+import FianzaCuotasPanel from "@/components/FianzaCuotasPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +31,12 @@ function Tarjeta({ titulo, importe, detalle, icono, color }: { titulo: string; i
 }
 
 export default async function FianzasPage() {
-  const [fianzas, inquilinos, habitaciones, viviendas] = await Promise.all([
+  const [fianzas, inquilinos, habitaciones, viviendas, cuotas] = await Promise.all([
     obtenerFianzas(),
     obtenerInquilinos(),
     obtenerHabitaciones(),
     obtenerViviendas(),
+    obtenerCuotasFianzas(),
   ]);
 
   const filtrar = (estado: string) => fianzas.filter((fianza) => fianza.estado === estado);
@@ -149,7 +151,7 @@ export default async function FianzasPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left">
               <thead className="bg-slate-50 text-sm text-slate-600">
-                <tr><th className="px-5 py-4 font-semibold">Inquilino</th><th className="px-5 py-4 font-semibold">Vivienda / habitaci{"\u00f3"}n</th><th className="px-5 py-4 font-semibold">Cobro</th><th className="px-5 py-4 font-semibold">Importe</th><th className="px-5 py-4 font-semibold">Resoluci{"\u00f3"}n</th><th className="px-5 py-4 font-semibold">Estado</th></tr>
+                <tr><th className="px-5 py-4 font-semibold">Inquilino</th><th className="px-5 py-4 font-semibold">Vivienda / habitaci{"\u00f3"}n</th><th className="px-5 py-4 font-semibold">Cobro</th><th className="px-5 py-4 font-semibold">Fianza</th><th className="px-5 py-4 font-semibold">Plan y entregas</th><th className="px-5 py-4 font-semibold">Resoluci{"\u00f3"}n</th><th className="px-5 py-4 font-semibold">Estado</th></tr>
               </thead>
               <tbody>
                 {fianzas.map((fianza) => {
@@ -163,7 +165,8 @@ export default async function FianzasPage() {
                       <td className="px-5 py-4"><p className="font-semibold text-slate-900">{inquilino ? `${inquilino.nombre} ${inquilino.apellidos}` : "Inquilino eliminado"}</p><p className="mt-1 text-sm text-slate-500">{inquilino?.documento || "Sin documento"}</p></td>
                       <td className="px-5 py-4 text-slate-700">{vivienda?.nombre ?? "-"} / {habitacion?.codigo ?? "-"}</td>
                       <td className="px-5 py-4 text-slate-600">{fecha(fianza.fecha_cobro)}</td>
-                      <td className="px-5 py-4 font-semibold text-slate-900">{moneda.format(Number(fianza.importe))}</td>
+                      <td className="px-5 py-4 font-semibold text-slate-900"><p>{moneda.format(Number(fianza.importe))}</p><p className="mt-1 text-sm font-normal text-blue-700">Entregado: {moneda.format(Number(fianza.importe_entregado))}</p></td>
+                      <td className="px-5 py-4"><FianzaCuotasPanel fianzaId={fianza.id} importeTotal={Number(fianza.importe)} entregado={Number(fianza.importe_entregado)} cuotas={cuotas.filter((cuota) => cuota.fianza_id === fianza.id)} /></td>
                       <td className="px-5 py-4 text-slate-600">{fianza.estado === "COBRADA" ? "Pendiente" : fianza.estado === "PENDIENTE_REVISION" ? "Revisar historial" : <><p>{fecha(fianza.fecha_resolucion)}</p>{fianza.motivo_retencion && <p className="mt-1 max-w-xs text-xs text-slate-500">{fianza.motivo_retencion}</p>}</>}</td>
                       <td className="px-5 py-4"><span className={`rounded-full px-3 py-1 text-xs font-bold ${estiloEstado}`}>{nombreEstado}</span></td>
                     </tr>

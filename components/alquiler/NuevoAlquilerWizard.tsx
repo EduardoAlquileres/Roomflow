@@ -43,6 +43,8 @@ export default function NuevoAlquilerWizard({
     alquiler: alquilerInicial,
     gastos: gastosIniciales,
     fianza: fianzaInicial,
+    importeFianzaInicial: Number((fianzaInicial / 2).toFixed(2)),
+    numeroCuotasFianza: 2,
   });
 
   const [paso, setPaso] = useState(0);

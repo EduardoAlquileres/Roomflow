@@ -16,3 +16,15 @@ export interface Fianza {
   observaciones: string | null;
   created_at: string;
 }
+
+export interface CuotaFianza {
+  id: string;
+  fianza_id: string;
+  numero: number;
+  fecha_prevista: string;
+  importe: number;
+  importe_pagado: number;
+  fecha_pago: string | null;
+  estado: "PENDIENTE" | "PAGADA";
+  observaciones: string | null;
+}
