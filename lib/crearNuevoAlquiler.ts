@@ -150,7 +150,8 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
 
     if (errorFianzaBusqueda) throw errorFianzaBusqueda;
 
-    if (!fianzaExistente) {
+    let fianzaId = fianzaExistente?.id;
+    if (!fianzaId) {
       const { data: fianzaCreada, error } = await supabase.from("fianzas").insert({
         estancia_id: estancia1.id,
         inquilino_id: inquilino1.id,
@@ -165,13 +166,22 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
           : datos.observaciones.trim() || null,
       }).select("id").single();
       if (error) throw error;
+      fianzaId = fianzaCreada.id;
+    }
 
+    const { data: cuotasExistentes, error: errorBusquedaCuotas } = await supabase
+      .from("fianza_cuotas")
+      .select("id")
+      .eq("fianza_id", fianzaId)
+      .limit(1);
+    if (errorBusquedaCuotas) throw errorBusquedaCuotas;
+    if (!cuotasExistentes?.length) {
       const fechaBase = new Date(`${datos.fechaEntrada}T12:00:00`);
       const numeroCuotas = Math.max(1, Math.min(12, Number(datos.numeroCuotasFianza) || 1));
       const pendienteFianza = Math.max(importeFianza - importeEntregadoFianza, 0);
       const importePorCuota = Number((pendienteFianza / numeroCuotas).toFixed(2));
       const cuotas = [{
-        fianza_id: fianzaCreada.id, numero: 1,
+        fianza_id: fianzaId, numero: 1,
         fecha_prevista: datos.tipoInicio === "RESERVA" ? datos.fechaReserva || datos.fechaEntrada : datos.fechaEntrada,
         importe: importeEntregadoFianza, importe_pagado: importeEntregadoFianza,
         fecha_pago: importeEntregadoFianza > 0 ? (datos.tipoInicio === "RESERVA" ? datos.fechaReserva || datos.fechaEntrada : datos.fechaEntrada) : null,
@@ -181,7 +191,7 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
         const fechaCuota = new Date(fechaBase);
         fechaCuota.setMonth(fechaCuota.getMonth() + indice + 1);
         const importeCuota = indice === numeroCuotas - 1 ? Number((pendienteFianza - importePorCuota * (numeroCuotas - 1)).toFixed(2)) : importePorCuota;
-        if (importeCuota > 0) cuotas.push({ fianza_id: fianzaCreada.id, numero: indice + 2, fecha_prevista: fechaCuota.toISOString().slice(0, 10), importe: importeCuota, importe_pagado: 0, fecha_pago: null, estado: "PENDIENTE" });
+        if (importeCuota > 0) cuotas.push({ fianza_id: fianzaId, numero: indice + 2, fecha_prevista: fechaCuota.toISOString().slice(0, 10), importe: importeCuota, importe_pagado: 0, fecha_pago: null, estado: "PENDIENTE" });
       }
       const { error: errorCuotas } = await supabase.from("fianza_cuotas").insert(cuotas);
       if (errorCuotas) throw errorCuotas;
