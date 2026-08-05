@@ -59,7 +59,10 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
               const habitacion = obtenerHabitacion(cobro.habitacion_id);
               const vivienda = obtenerVivienda(cobro.habitacion_id);
               const inquilino = obtenerInquilino(cobro.inquilino_id);
-              return <tr key={cobro.id}>
+              return <tr
+                key={cobro.id}
+                style={cobro.estado === "PARCIAL" ? { background: "#eff6ff", boxShadow: "inset 4px 0 0 #2563eb" } : undefined}
+              >
                 <td style={td}>{nombreMes(cobro.periodo_mes)} {cobro.periodo_anio}</td>
                 <td style={td}>{vivienda?.nombre ?? "-"}</td>
                 <td style={td}>{habitacion?.codigo ?? "-"}</td>
@@ -83,7 +86,7 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
           const vivienda = obtenerVivienda(cobro.habitacion_id);
           const inquilino = obtenerInquilino(cobro.inquilino_id);
           return (
-            <article key={cobro.id} className="p-4">
+            <article key={cobro.id} className={`p-4 ${cobro.estado === "PARCIAL" ? "border-l-4 border-blue-600 bg-blue-50" : ""}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-slate-900">{nombreMes(cobro.periodo_mes)} {cobro.periodo_anio}</p>
