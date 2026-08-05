@@ -166,7 +166,7 @@ export default async function FianzasPage() {
                       <td className="px-5 py-4 text-slate-700">{vivienda?.nombre ?? "-"} / {habitacion?.codigo ?? "-"}</td>
                       <td className="px-5 py-4 text-slate-600">{fecha(fianza.fecha_cobro)}</td>
                       <td className="px-5 py-4 font-semibold text-slate-900"><p>{moneda.format(Number(fianza.importe))}</p><p className="mt-1 text-sm font-normal text-blue-700">Entregado: {moneda.format(Number(fianza.importe_entregado))}</p></td>
-                      <td className="px-5 py-4"><FianzaCuotasPanel fianzaId={fianza.id} importeTotal={Number(fianza.importe)} entregado={Number(fianza.importe_entregado)} cuotas={cuotas.filter((cuota) => cuota.fianza_id === fianza.id)} /></td>
+                      <td className="px-5 py-4"><FianzaCuotasPanel fianzaId={fianza.id} importeTotal={Number(fianza.importe)} entregado={Number(fianza.importe_entregado)} fechaCobro={fianza.fecha_cobro} cuotas={cuotas.filter((cuota) => cuota.fianza_id === fianza.id)} /></td>
                       <td className="px-5 py-4 text-slate-600">{fianza.estado === "COBRADA" ? "Pendiente" : fianza.estado === "PENDIENTE_REVISION" ? "Revisar historial" : <><p>{fecha(fianza.fecha_resolucion)}</p>{fianza.motivo_retencion && <p className="mt-1 max-w-xs text-xs text-slate-500">{fianza.motivo_retencion}</p>}</>}</td>
                       <td className="px-5 py-4"><span className={`rounded-full px-3 py-1 text-xs font-bold ${estiloEstado}`}>{nombreEstado}</span></td>
                     </tr>
