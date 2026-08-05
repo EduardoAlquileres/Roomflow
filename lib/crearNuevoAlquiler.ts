@@ -193,7 +193,7 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
         const importeCuota = indice === numeroCuotas - 1 ? Number((pendienteFianza - importePorCuota * (numeroCuotas - 1)).toFixed(2)) : importePorCuota;
         if (importeCuota > 0) cuotas.push({ fianza_id: fianzaId, numero: indice + 2, fecha_prevista: fechaCuota.toISOString().slice(0, 10), importe: importeCuota, importe_pagado: 0, fecha_pago: null, estado: "PENDIENTE" });
       }
-      const { error: errorCuotas } = await supabase.from("fianza_cuotas").insert(cuotas);
+      const { error: errorCuotas } = await supabase.from("fianza_cuotas").upsert(cuotas, { onConflict: "fianza_id,numero" });
       if (errorCuotas) throw errorCuotas;
     }
   }

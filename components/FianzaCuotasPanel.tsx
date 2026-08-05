@@ -47,6 +47,16 @@ export default function FianzaCuotasPanel({ fianzaId, importeTotal, entregado, f
   async function crearPlanInicial() {
     setGuardando(true);
     try {
+      const { data: planExistente, error: errorPlanExistente } = await supabase
+        .from("fianza_cuotas")
+        .select("id")
+        .eq("fianza_id", fianzaId)
+        .limit(1);
+      if (errorPlanExistente) throw errorPlanExistente;
+      if (planExistente?.length) {
+        router.refresh();
+        return;
+      }
       const fechaInicio = new Date(`${fechaCobro.slice(0, 10)}T12:00:00`);
       const pendienteInicial = Math.max(importeTotal - entregado, 0);
       const partes = pendienteInicial > 0 ? 2 : 0;
