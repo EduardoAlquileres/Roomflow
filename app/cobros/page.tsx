@@ -9,6 +9,9 @@ import {
   LayoutDashboard,
   ListFilter,
   BarChart3,
+  Building2,
+  TrendingUp,
+  UsersRound,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -72,6 +75,13 @@ type Vivienda = {
 
 type GastoVivienda = { vivienda_id: string; fecha: string; importe: number; estado: string };
 
+type EstanciaResumen = {
+  inquilino_id: string;
+  habitacion_id: string;
+  fecha_entrada: string;
+  fecha_salida: string | null;
+};
+
 type Inquilino = {
   id: string;
   nombre: string;
@@ -127,6 +137,7 @@ async function eliminarCobroSeleccionado(id: string) {
 
   const [viviendas, setViviendas] = useState<Vivienda[]>([]);
   const [gastosVivienda, setGastosVivienda] = useState<GastoVivienda[]>([]);
+  const [estancias, setEstancias] = useState<EstanciaResumen[]>([]);
 
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
   const [modalPagoAbierto, setModalPagoAbierto] =
@@ -302,10 +313,15 @@ async function guardarPago(datos: {
       .from("gastos")
       .select("vivienda_id, fecha, importe, estado");
 
+    const { data: estanciasData } = await supabase
+      .from("estancias")
+      .select("inquilino_id, habitacion_id, fecha_entrada, fecha_salida");
+
     setHabitaciones((habitacionesData ?? []) as Habitacion[]);
     setViviendas((viviendasData ?? []) as Vivienda[]);
     setInquilinos((inquilinosData ?? []) as Inquilino[]);
     setGastosVivienda((gastosData ?? []) as GastoVivienda[]);
+    setEstancias((estanciasData ?? []) as EstanciaResumen[]);
 
     setCargando(false);
   }
@@ -356,33 +372,33 @@ async function guardarPago(datos: {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(4,minmax(0,1fr))",
-        gap: 20,
-        marginBottom: 30,
+        gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))",
+        gap: 12,
+        marginBottom: 22,
       }}
     >
       <Tarjeta
         titulo="Previsto de cobro"
         valor={formatoKpiCobro.format(resumen.previstas)}
-        icono={<Euro size={28} color="#2563eb" />}
+        icono={<Euro size={22} color="#2563eb" />}
       />
 
       <Tarjeta
         titulo="Cobrado"
         valor={formatoKpiCobro.format(resumen.cobradas)}
-        icono={<CheckCircle2 size={28} color="green" />}
+        icono={<CheckCircle2 size={22} color="green" />}
       />
 
       <Tarjeta
         titulo="Pendiente"
         valor={formatoKpiCobro.format(resumen.pendientes)}
-        icono={<AlertTriangle size={28} color="#dc2626" />}
+        icono={<AlertTriangle size={22} color="#dc2626" />}
       />
 
       <Tarjeta
         titulo="Habitaciones con pendiente"
         valor={String(resumen.habitacionesPendientes)}
-        icono={<Wallet size={28} color="#ea580c" />}
+        icono={<Wallet size={22} color="#ea580c" />}
       />
     </div>
 
@@ -394,35 +410,37 @@ async function guardarPago(datos: {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(4,minmax(0,1fr))",
-        gap: 20,
-        marginBottom: 30,
+        gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))",
+        gap: 12,
+        marginBottom: 22,
       }}
     >
       <Tarjeta
   titulo="Cobrado acumulado"
   valor={formatoKpiCobro.format(resumenAnual.cobradas)}
-  icono={<Euro size={28} color="#2563eb" />}
+  icono={<Euro size={22} color="#2563eb" />}
 />
 
 <Tarjeta
   titulo="Media mensual cobrada"
   valor={formatoKpiCobro.format(mediaMensualCobrada)}
-  icono={<CheckCircle2 size={28} color="green" />}
+  icono={<CheckCircle2 size={22} color="green" />}
 />
 
 <Tarjeta
   titulo="Mejor mes cobrado"
   valor={formatoKpiCobro.format(mejorMesCobrado)}
-  icono={<Wallet size={28} color="#7c3aed" />}
+  icono={<Wallet size={22} color="#7c3aed" />}
 />
 
 <Tarjeta
   titulo="Cobros con pago"
   valor={String(cobrosConPago)}
-  icono={<CheckCircle2 size={28} color="#16a34a" />}
+  icono={<CheckCircle2 size={22} color="#16a34a" />}
 />
     </div>
+
+    <PanelAnaliticaOcupacion estancias={estancias} habitaciones={habitaciones} viviendas={viviendas} anio={anioActual} />
 
     </>
     )}
@@ -569,7 +587,7 @@ function Tarjeta({
         background: "#fff",
         borderRadius: 12,
         border: "1px solid #e2e8f0",
-        padding: 24,
+        padding: 16,
       }}
     >
       <div
@@ -577,7 +595,7 @@ function Tarjeta({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 20,
+          marginBottom: 12,
         }}
       >
         {icono}
@@ -594,9 +612,9 @@ function Tarjeta({
 
       <div
         style={{
-          fontSize: 30,
+          fontSize: 24,
           fontWeight: 700,
-          marginTop: 8,
+          marginTop: 6,
         }}
       >
         {valor}
@@ -616,4 +634,66 @@ function BotonVista({ activa, onClick, icono, texto }: { activa: boolean; onClic
       {texto}
     </button>
   );
+}
+
+function fechaIso(anio: number, mes: number, dia: number) {
+  return `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+function diasEntre(inicio: string, fin: string) {
+  const desde = new Date(`${inicio.slice(0, 10)}T12:00:00`).getTime();
+  const hasta = new Date(`${fin.slice(0, 10)}T12:00:00`).getTime();
+  return Math.max(1, Math.round((hasta - desde) / 86_400_000) + 1);
+}
+
+function formatoEstancia(dias: number) {
+  if (dias < 31) return `${dias} días`;
+  const meses = Math.floor(dias / 30);
+  const resto = dias % 30;
+  return `${meses} mes${meses === 1 ? "" : "es"}${resto ? ` y ${resto} días` : ""}`;
+}
+
+function PanelAnaliticaOcupacion({ estancias, habitaciones, viviendas, anio }: { estancias: EstanciaResumen[]; habitaciones: Habitacion[]; viviendas: Vivienda[]; anio: number }) {
+  const hoy = new Date();
+  const hoyIso = fechaIso(hoy.getFullYear(), hoy.getMonth() + 1, hoy.getDate());
+  const porInquilino = new Map<string, { inicio: string; fin: string }>();
+  for (const estancia of estancias) {
+    const actual = porInquilino.get(estancia.inquilino_id);
+    const fin = estancia.fecha_salida ?? hoyIso;
+    porInquilino.set(estancia.inquilino_id, {
+      inicio: !actual || estancia.fecha_entrada < actual.inicio ? estancia.fecha_entrada : actual.inicio,
+      fin: !actual || fin > actual.fin ? fin : actual.fin,
+    });
+  }
+  const duraciones = [...porInquilino.values()].map(({ inicio, fin }) => diasEntre(inicio, fin));
+  const mediaDias = duraciones.length ? Math.round(duraciones.reduce((suma, dias) => suma + dias, 0) / duraciones.length) : 0;
+  const mesActual = hoy.getFullYear() === anio ? hoy.getMonth() + 1 : 12;
+  const meses = Array.from({ length: mesActual }, (_, indice) => indice + 1);
+  const etiquetaMes = (mes: number) => new Intl.DateTimeFormat("es-ES", { month: "short" }).format(new Date(anio, mes - 1, 1)).replace(".", "");
+
+  return <section className="mt-6 grid gap-5 xl:grid-cols-[280px_1fr]">
+    <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <div className="flex items-center gap-3"><div className="rounded-lg bg-blue-100 p-2 text-blue-700"><UsersRound size={20} /></div><div><h2 className="font-bold text-slate-900">Estancia media</h2><p className="text-sm text-slate-500">Por inquilino, según su trayectoria.</p></div></div>
+      <p className="mt-5 text-3xl font-bold text-slate-900">{formatoEstancia(mediaDias)}</p>
+      <p className="mt-2 text-sm text-slate-500">Calculada sobre {duraciones.length} inquilino{duraciones.length === 1 ? "" : "s"} con estancia registrada.</p>
+    </article>
+    <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="rounded-lg bg-violet-100 p-2 text-violet-700"><TrendingUp size={20} /></div><div><h2 className="font-bold text-slate-900">Evolución de ocupación por vivienda</h2><p className="text-sm text-slate-500">Habitaciones ocupadas cada mes de {anio}.</p></div></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Enero a {etiquetaMes(mesActual)}</span></div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        {viviendas.map((vivienda) => {
+          const habitacionesVivienda = habitaciones.filter((habitacion) => habitacion.vivienda_id === vivienda.id);
+          if (!habitacionesVivienda.length) return null;
+          const puntos = meses.map((mes) => {
+            const ultimoDia = new Date(anio, mes, 0).getDate();
+            const inicio = fechaIso(anio, mes, 1);
+            const fin = fechaIso(anio, mes, ultimoDia);
+            const ocupadas = habitacionesVivienda.filter((habitacion) => estancias.some((estancia) => estancia.habitacion_id === habitacion.id && estancia.fecha_entrada <= fin && (!estancia.fecha_salida || estancia.fecha_salida >= inicio))).length;
+            return { mes, ocupadas, porcentaje: Math.round((ocupadas / habitacionesVivienda.length) * 100) };
+          });
+          const ultimo = puntos[puntos.length - 1];
+          return <div key={vivienda.id} className="rounded-xl border border-slate-100 p-4"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 font-semibold text-slate-900"><Building2 size={17} className="text-blue-600" />{vivienda.nombre}</div><span className="text-sm font-semibold text-slate-600">{ultimo.ocupadas}/{habitacionesVivienda.length} hoy</span></div><div className="mt-4 flex h-28 items-end gap-1.5 border-b border-slate-200 pb-1">{puntos.map((punto) => <div key={punto.mes} className="flex h-full min-w-0 flex-1 flex-col justify-end"><div title={`${etiquetaMes(punto.mes)}: ${punto.ocupadas}/${habitacionesVivienda.length} (${punto.porcentaje}%)`} className="rounded-t bg-blue-500 transition-all" style={{ height: `${Math.max(punto.porcentaje, punto.ocupadas ? 8 : 0)}%` }} /></div>)}</div><div className="mt-2 flex gap-1.5 text-center text-[10px] font-medium text-slate-400">{puntos.map((punto) => <span key={punto.mes} className="min-w-0 flex-1 truncate">{etiquetaMes(punto.mes)}</span>)}</div></div>;
+        })}
+      </div>
+    </article>
+  </section>;
 }
