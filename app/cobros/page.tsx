@@ -38,6 +38,13 @@ type Resumen = {
   habitacionesPendientes: number;
 };
 
+const formatoKpiCobro = new Intl.NumberFormat("es-ES", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 function calcularResumen(cobros: Cobro[]): Resumen {
   return {
     previstas: cobros.reduce((suma, cobro) => suma + Number(cobro.total), 0),
@@ -356,19 +363,19 @@ async function guardarPago(datos: {
     >
       <Tarjeta
         titulo="Previsto de cobro"
-        valor={`${resumen.previstas.toFixed(2)} €`}
+        valor={formatoKpiCobro.format(resumen.previstas)}
         icono={<Euro size={28} color="#2563eb" />}
       />
 
       <Tarjeta
         titulo="Cobrado"
-        valor={`${resumen.cobradas.toFixed(2)} €`}
+        valor={formatoKpiCobro.format(resumen.cobradas)}
         icono={<CheckCircle2 size={28} color="green" />}
       />
 
       <Tarjeta
         titulo="Pendiente"
-        valor={`${resumen.pendientes.toFixed(2)} €`}
+        valor={formatoKpiCobro.format(resumen.pendientes)}
         icono={<AlertTriangle size={28} color="#dc2626" />}
       />
 
@@ -394,34 +401,19 @@ async function guardarPago(datos: {
     >
       <Tarjeta
   titulo="Cobrado acumulado"
-  valor={new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(resumenAnual.cobradas)}
+  valor={formatoKpiCobro.format(resumenAnual.cobradas)}
   icono={<Euro size={28} color="#2563eb" />}
 />
 
 <Tarjeta
   titulo="Media mensual cobrada"
-  valor={new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(mediaMensualCobrada)}
+  valor={formatoKpiCobro.format(mediaMensualCobrada)}
   icono={<CheckCircle2 size={28} color="green" />}
 />
 
 <Tarjeta
   titulo="Mejor mes cobrado"
-  valor={new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(mejorMesCobrado)}
+  valor={formatoKpiCobro.format(mejorMesCobrado)}
   icono={<Wallet size={28} color="#7c3aed" />}
 />
 
