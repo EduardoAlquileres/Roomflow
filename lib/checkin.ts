@@ -15,6 +15,7 @@ import {
 import { crearEstancia } from "./estancias";
 import { registrarFianza } from "./fianzas";
 import { generarCobrosPendientes } from "./generarCobrosPendientes";
+import { factorProrrateoEntrada } from "./estanciasCobros";
 
 import {
   Inquilino,
@@ -127,16 +128,25 @@ export async function realizarCheckIn(
 
   const hoy = new Date(datos.fechaEntrada);
 
+  const fechaEntrada = new Date(`${datos.fechaEntrada}T12:00:00`);
+  const factorPrimerMes = factorProrrateoEntrada({
+    id: "nueva-estancia", inquilino_id: inquilino.id, habitacion_id: habitacion.id,
+    fecha_entrada: datos.fechaEntrada, fecha_salida: null, precio: habitacion.precio, gastos: habitacion.gastos,
+    created_at: new Date().toISOString(),
+  }, fechaEntrada.getFullYear(), fechaEntrada.getMonth() + 1);
+  const alquilerPrimerMes = Number((habitacion.precio * factorPrimerMes).toFixed(2));
+  const gastosPrimerMes = Number((habitacion.gastos * factorPrimerMes).toFixed(2));
+
   const cobro = await crearCobro({
     habitacion_id: habitacion.id,
     inquilino_id: inquilino.id,
     periodo_anio: hoy.getFullYear(),
     periodo_mes: hoy.getMonth() + 1,
-    alquiler: habitacion.precio,
-    gastos: habitacion.gastos,
-    total: habitacion.precio + habitacion.gastos,
+    alquiler: alquilerPrimerMes,
+    gastos: gastosPrimerMes,
+    total: alquilerPrimerMes + gastosPrimerMes,
     pagado: 0,
-    pendiente: habitacion.precio + habitacion.gastos,
+    pendiente: alquilerPrimerMes + gastosPrimerMes,
     estado: "PENDIENTE",
     fecha_vencimiento: datos.fechaEntrada,
     observaciones: null,

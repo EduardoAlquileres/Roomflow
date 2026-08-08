@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Cobro } from "@/types/cobro";
-import { EstanciaEconomica, estanciaParaPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
 type ResultadoSincronizacion = { actualizados: number };
 
@@ -24,9 +24,8 @@ export async function sincronizarCobrosHistoricos(): Promise<ResultadoSincroniza
     const estancia = estanciaParaPeriodo(estancias, cobro.inquilino_id, cobro.periodo_anio, cobro.periodo_mes);
     if (!estancia) continue;
 
-    const alquiler = Number(estancia.precio);
-    const gastos = Number(estancia.gastos) * Math.max(1, personasEnHabitacionPeriodo(estancias, estancia.habitacion_id, cobro.periodo_anio, cobro.periodo_mes));
-    const total = alquiler + gastos;
+    const personas = Math.max(1, personasEnHabitacionPeriodo(estancias, estancia.habitacion_id, cobro.periodo_anio, cobro.periodo_mes));
+    const { alquiler, gastos, total } = importesCobroPeriodo(estancia, personas, cobro.periodo_anio, cobro.periodo_mes);
     const pagado = Number(cobro.pagado);
     const pendiente = Math.max(total - pagado, 0);
     const estado: Cobro["estado"] = pendiente === 0 ? "PAGADO" : pagado > 0 ? "PARCIAL" : "PENDIENTE";

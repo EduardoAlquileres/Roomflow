@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Cobro } from "@/types/cobro";
-import { EstanciaEconomica, estanciaParaPeriodo, inicioPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo, importesCobroPeriodo, inicioPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
 type InquilinoActivo = { id: string; habitacion_id: string; fecha_entrada: string; created_at: string };
 type HabitacionEconomica = { id: string; precio: number; gastos: number };
@@ -91,9 +91,7 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
       if (existentes.has(clave)) continue;
 
       const personas = Math.max(1, personasEnHabitacionPeriodo(todasLasEstancias, estancia.habitacion_id, anio, mes));
-      const alquiler = Number(estancia.precio);
-      const gastos = Number(estancia.gastos) * personas;
-      const total = alquiler + gastos;
+      const { alquiler, gastos, total } = importesCobroPeriodo(estancia, personas, anio, mes);
       nuevos.push({ habitacion_id: estancia.habitacion_id, inquilino_id: estancia.inquilino_id, periodo_mes: mes, periodo_anio: anio, alquiler, gastos, total, pagado: 0, pendiente: total, estado: "PENDIENTE", fecha_vencimiento: fechaVencimiento(periodo, estancia.fecha_entrada), observaciones: "Cobro mensual generado automáticamente según la estancia del periodo." });
       existentes.add(clave);
       const etiqueta = `${anio}-${String(mes).padStart(2, "0")}`;

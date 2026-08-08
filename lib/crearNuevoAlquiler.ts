@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { NuevoAlquiler } from "@/types/nuevoAlquiler";
 import { generarCobrosPendientes } from "@/lib/generarCobrosPendientes";
+import { factorProrrateoEntrada } from "@/lib/estanciasCobros";
 
 type InquilinoGuardado = { id: string };
 
@@ -199,7 +200,14 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
   }
 
   const fecha = new Date(`${datos.fechaEntrada}T12:00:00`);
-  const total = Number(datos.alquiler) + gastosTotales;
+  const factorPrimerMes = factorProrrateoEntrada({
+    id: "nueva-estancia", inquilino_id: inquilino1.id, habitacion_id: datos.habitacionId,
+    fecha_entrada: datos.fechaEntrada, fecha_salida: null, precio: Number(datos.alquiler), gastos: gastosPorPersona,
+    created_at: new Date().toISOString(),
+  }, fecha.getFullYear(), fecha.getMonth() + 1);
+  const alquilerPrimerMes = Number((Number(datos.alquiler) * factorPrimerMes).toFixed(2));
+  const gastosPrimerMes = Number((gastosTotales * factorPrimerMes).toFixed(2));
+  const total = Number((alquilerPrimerMes + gastosPrimerMes).toFixed(2));
   const { data: cobroExistente, error: errorCobroBusqueda } = await supabase
     .from("cobros")
     .select("id")
@@ -221,8 +229,8 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
         inquilino_id: inquilino1.id,
         periodo_anio: fecha.getFullYear(),
         periodo_mes: fecha.getMonth() + 1,
-        alquiler: Number(datos.alquiler),
-        gastos: gastosTotales,
+        alquiler: alquilerPrimerMes,
+        gastos: gastosPrimerMes,
         total,
         pagado: 0,
         pendiente: total,

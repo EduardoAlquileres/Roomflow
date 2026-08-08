@@ -43,3 +43,26 @@ export function personasEnHabitacionPeriodo(estancias: EstanciaEconomica[], habi
   }
   return personas.size;
 }
+
+function redondearImporte(importe: number) {
+  return Number(importe.toFixed(2));
+}
+
+/**
+ * El primer mes se cobra únicamente por la parte del mes posterior a la entrada.
+ * Ejemplo: entrada el día 15 de abril: 550 € pasan a ser 275 €.
+ */
+export function factorProrrateoEntrada(estancia: EstanciaEconomica, anio: number, mes: number) {
+  const [anioEntrada, mesEntrada, diaEntrada] = estancia.fecha_entrada.slice(0, 10).split("-").map(Number);
+  if (anioEntrada !== anio || mesEntrada !== mes || diaEntrada <= 1) return 1;
+
+  const diasDelMes = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  return Math.max(0, (diasDelMes - diaEntrada) / diasDelMes);
+}
+
+export function importesCobroPeriodo(estancia: EstanciaEconomica, personas: number, anio: number, mes: number) {
+  const factor = factorProrrateoEntrada(estancia, anio, mes);
+  const alquiler = redondearImporte(Number(estancia.precio) * factor);
+  const gastos = redondearImporte(Number(estancia.gastos) * personas * factor);
+  return { alquiler, gastos, total: redondearImporte(alquiler + gastos), factor };
+}
