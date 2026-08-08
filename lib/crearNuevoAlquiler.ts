@@ -241,12 +241,7 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
       .select("id")
       .single();
 
-    if (error) {
-      if (error.code === "23505" && error.message.includes("cobro_unico_mes")) {
-        throw new Error("La base de datos todavía no permite dos estancias en una habitación durante el mismo mes. Ejecuta el archivo supabase/cobros_multiples_estancias_mismo_mes.sql en Supabase y vuelve a intentarlo.");
-      }
-      throw error;
-    }
+    if (error) throw error;
     cobroId = data.id;
   }
 
