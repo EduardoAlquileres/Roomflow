@@ -15,6 +15,7 @@ type Props = {
 
 type Formulario = {
   id: string | null;
+  esActiva: boolean;
   habitacionId: string;
   fechaEntrada: string;
   fechaSalida: string;
@@ -55,6 +56,7 @@ export default function GestionEstanciasPanel({
     setError("");
     setFormulario({
       id: null,
+      esActiva: false,
       habitacionId: habitacion?.id ?? "",
       fechaEntrada: "",
       fechaSalida: "",
@@ -64,10 +66,10 @@ export default function GestionEstanciasPanel({
   }
 
   function editar(estancia: Estancia) {
-    if (estancia.estado === "ACTIVA") return;
     setError("");
     setFormulario({
       id: estancia.id,
+      esActiva: estancia.estado === "ACTIVA",
       habitacionId: estancia.habitacion_id,
       fechaEntrada: fechaCampo(estancia.fecha_entrada),
       fechaSalida: fechaCampo(estancia.fecha_salida),
@@ -91,11 +93,11 @@ export default function GestionEstanciasPanel({
   }
 
   async function guardar() {
-    if (!formulario || !formulario.habitacionId || !formulario.fechaEntrada || !formulario.fechaSalida || !formulario.precio || !formulario.gastos) {
+    if (!formulario || !formulario.habitacionId || !formulario.fechaEntrada || (!formulario.esActiva && !formulario.fechaSalida) || !formulario.precio || !formulario.gastos) {
       setError("Completa habitación, fechas, alquiler y gastos.");
       return;
     }
-    if (formulario.fechaSalida < formulario.fechaEntrada) {
+    if (!formulario.esActiva && formulario.fechaSalida < formulario.fechaEntrada) {
       setError("La fecha de salida debe ser igual o posterior a la entrada.");
       return;
     }
@@ -105,10 +107,10 @@ export default function GestionEstanciasPanel({
     const valores = {
       habitacion_id: formulario.habitacionId,
       fecha_entrada: formulario.fechaEntrada,
-      fecha_salida: formulario.fechaSalida,
+      fecha_salida: formulario.esActiva ? null : formulario.fechaSalida,
       precio: Number(formulario.precio),
       gastos: Number(formulario.gastos),
-      estado: "FINALIZADA",
+      estado: formulario.esActiva ? "ACTIVA" : "FINALIZADA",
     };
     const respuesta = formulario.id
       ? await supabase.from("estancias").update(valores).eq("id", formulario.id)
@@ -166,8 +168,8 @@ export default function GestionEstanciasPanel({
               </div>
               <div className="flex items-center gap-2">
                 <span className={`rounded-full px-3 py-1 text-xs font-bold ${esActiva ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-600"}`}>{esActiva ? "Actual" : "Finalizada"}</span>
+                <button type="button" onClick={() => editar(estancia)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50" title={esActiva ? "Corregir estancia actual" : "Editar estancia"}><Pencil size={18} /></button>
                 {!esActiva && <>
-                  <button type="button" onClick={() => editar(estancia)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50" title="Editar estancia"><Pencil size={18} /></button>
                   <button type="button" onClick={() => eliminar(estancia)} className="rounded-lg p-2 text-red-600 hover:bg-red-50" title="Eliminar estancia"><Trash2 size={18} /></button>
                 </>}
               </div>
@@ -190,7 +192,14 @@ export default function GestionEstanciasPanel({
                 </select>
               </label>
               <label className="text-sm font-medium text-slate-700">Fecha de entrada<input type="date" value={formulario.fechaEntrada} onChange={(event) => setFormulario({ ...formulario, fechaEntrada: event.target.value })} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
-              <label className="text-sm font-medium text-slate-700">Fecha de salida<input type="date" value={formulario.fechaSalida} onChange={(event) => setFormulario({ ...formulario, fechaSalida: event.target.value })} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
+              {formulario.esActiva ? (
+                <div className="text-sm text-slate-500">
+                  <span className="font-medium text-slate-700">Situación</span>
+                  <p className="mt-2 rounded-lg bg-green-50 px-3 py-2 text-green-700">Estancia actual, sin fecha de salida.</p>
+                </div>
+              ) : (
+                <label className="text-sm font-medium text-slate-700">Fecha de salida<input type="date" value={formulario.fechaSalida} onChange={(event) => setFormulario({ ...formulario, fechaSalida: event.target.value })} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
+              )}
               <label className="text-sm font-medium text-slate-700">Alquiler mensual<input type="number" min="0" step="0.01" value={formulario.precio} onChange={(event) => setFormulario({ ...formulario, precio: event.target.value })} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
               <label className="text-sm font-medium text-slate-700">Gastos por persona<input type="number" min="0" step="0.01" value={formulario.gastos} onChange={(event) => setFormulario({ ...formulario, gastos: event.target.value })} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
             </div>
