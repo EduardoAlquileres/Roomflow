@@ -533,7 +533,8 @@ async function guardarPago(datos: {
     setHistorialAbierto(true);
   }}
   onEditar={(cobro) => {
-    console.log("Editar cobro", cobro);
+    setCobroHistorial(cobro);
+    setHistorialAbierto(true);
   }}
   onEliminar={eliminarCobroSeleccionado}
 />

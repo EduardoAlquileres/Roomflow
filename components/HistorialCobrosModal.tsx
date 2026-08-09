@@ -16,6 +16,7 @@ import {
   MovimientoCobro,
   obtenerMovimientos,
   eliminarMovimiento,
+  actualizarMovimiento,
   actualizarCobroDesdeMovimientos,
 } from "@/lib/movimientosCobro";
 
@@ -39,6 +40,13 @@ export default function HistorialCobrosModal({
   const [movimientos, setMovimientos] = useState<
     MovimientoCobro[]
   >([]);
+  const [editando, setEditando] = useState<MovimientoCobro | null>(null);
+  const [importeEdicion, setImporteEdicion] = useState("");
+  const [fechaEdicion, setFechaEdicion] = useState("");
+  const [metodoEdicion, setMetodoEdicion] = useState("");
+  const [observacionesEdicion, setObservacionesEdicion] = useState("");
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [errorEdicion, setErrorEdicion] = useState("");
 
   async function cargar() {
     if (!cobro) return;
@@ -88,6 +96,37 @@ await actualizarCobroDesdeMovimientos(
     await cargar();
 
     await onActualizado();
+  }
+
+  function abrirEdicion(movimiento: MovimientoCobro) {
+    setEditando(movimiento);
+    setImporteEdicion(String(movimiento.importe));
+    setFechaEdicion(movimiento.fecha.slice(0, 10));
+    setMetodoEdicion(movimiento.metodo);
+    setObservacionesEdicion(movimiento.observaciones ?? "");
+    setErrorEdicion("");
+  }
+
+  async function guardarEdicion() {
+    if (!editando || !cobro) return;
+    const importe = Number(importeEdicion.replace(",", "."));
+    if (!fechaEdicion || !metodoEdicion || !Number.isFinite(importe) || importe <= 0) {
+      setErrorEdicion("Indica una fecha, método e importe válido.");
+      return;
+    }
+    setGuardandoEdicion(true);
+    setErrorEdicion("");
+    try {
+      await actualizarMovimiento(editando.id, { fecha: fechaEdicion, importe, metodo: metodoEdicion, observaciones: observacionesEdicion.trim() || null });
+      await actualizarCobroDesdeMovimientos(cobro.id);
+      await cargar();
+      await onActualizado();
+      setEditando(null);
+    } catch (error) {
+      setErrorEdicion(error instanceof Error ? error.message : "No se pudo modificar el pago.");
+    } finally {
+      setGuardandoEdicion(false);
+    }
   }
 
   return (
@@ -302,6 +341,7 @@ await actualizarCobroDesdeMovimientos(
                     <button
                       style={botonEditar}
                       title="Editar pago"
+                      onClick={() => abrirEdicion(movimiento)}
                     >
                       <Pencil size={16} />
                     </button>
@@ -323,6 +363,19 @@ await actualizarCobroDesdeMovimientos(
             </div>
           )}
                   </div>
+        {editando && <div style={overlayEdicion}>
+          <div style={modalEdicion}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><div><h3 style={{ margin: 0, fontSize: 20 }}>Modificar pago</h3><p style={{ margin: "5px 0 0", color: "#64748b", fontSize: 14 }}>El total del cobro se recalculará automáticamente.</p></div><button onClick={() => setEditando(null)} style={botonCerrar}><X size={20} /></button></div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 20 }}>
+              <label style={labelEdicion}>Fecha<input type="date" value={fechaEdicion} onChange={(event) => setFechaEdicion(event.target.value)} style={inputEdicion} /></label>
+              <label style={labelEdicion}>Importe (€)<input inputMode="decimal" value={importeEdicion} onChange={(event) => setImporteEdicion(event.target.value)} style={inputEdicion} /></label>
+              <label style={labelEdicion}>Método<select value={metodoEdicion} onChange={(event) => setMetodoEdicion(event.target.value)} style={inputEdicion}><option value="EFECTIVO">Efectivo</option><option value="BIZUM">Bizum</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option></select></label>
+              <label style={{ ...labelEdicion, gridColumn: "1 / -1" }}>Observaciones<textarea rows={3} value={observacionesEdicion} onChange={(event) => setObservacionesEdicion(event.target.value)} style={inputEdicion} /></label>
+            </div>
+            {errorEdicion && <p style={{ color: "#b91c1c", fontSize: 14 }}>{errorEdicion}</p>}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}><button onClick={() => setEditando(null)} style={botonEditar}>Cancelar</button><button onClick={guardarEdicion} disabled={guardandoEdicion} style={botonGuardar}>{guardandoEdicion ? "Guardando..." : "Guardar cambios"}</button></div>
+          </div>
+        </div>}
       </div>
     </div>
   );
@@ -415,3 +468,9 @@ const botonEliminar: React.CSSProperties = {
   justifyContent: "center",
   cursor: "pointer",
 };
+
+const overlayEdicion: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: "rgba(15,23,42,.5)" };
+const modalEdicion: React.CSSProperties = { width: 520, maxWidth: "100%", borderRadius: 14, padding: 22, background: "#fff", boxShadow: "0 20px 50px rgba(0,0,0,.25)" };
+const labelEdicion: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6, fontSize: 14, fontWeight: 600, color: "#334155" };
+const inputEdicion: React.CSSProperties = { boxSizing: "border-box", width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", font: "inherit", fontWeight: 400 };
+const botonGuardar: React.CSSProperties = { border: "none", borderRadius: 8, padding: "10px 16px", background: "#2563eb", color: "#fff", fontWeight: 700, cursor: "pointer" };

@@ -165,3 +165,15 @@ export async function obtenerUltimoPago(
     movimientos.length - 1
   ];
 }
+
+export async function actualizarMovimiento(
+  id: string,
+  cambios: Pick<MovimientoCobro, "fecha" | "importe" | "metodo" | "observaciones">
+) {
+  const { error } = await supabase
+    .from("movimientos_cobro")
+    .update(cambios)
+    .eq("id", id);
+
+  if (error) throw error;
+}
