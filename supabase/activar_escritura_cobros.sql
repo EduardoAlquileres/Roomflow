@@ -4,6 +4,7 @@
 alter table public.cobros enable row level security;
 
 drop policy if exists "RoomFlow puede crear cobros" on public.cobros;
+drop policy if exists "RoomFlow puede consultar cobros" on public.cobros;
 drop policy if exists "RoomFlow puede modificar cobros" on public.cobros;
 drop policy if exists "RoomFlow puede eliminar cobros" on public.cobros;
 
@@ -11,6 +12,11 @@ create policy "RoomFlow puede crear cobros"
 on public.cobros
 for insert
 with check (true);
+
+create policy "RoomFlow puede consultar cobros"
+on public.cobros
+for select
+using (true);
 
 create policy "RoomFlow puede modificar cobros"
 on public.cobros
