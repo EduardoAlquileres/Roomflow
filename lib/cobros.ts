@@ -75,12 +75,16 @@ export async function actualizarCobro(
 export async function eliminarCobro(
   id: string
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("cobros")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
   if (error) throw error;
+  if (!data?.length) {
+    throw new Error("No se ha podido borrar el cobro porque Supabase no tiene permiso de eliminación. Ejecuta el archivo supabase/permitir_eliminar_cobros.sql una sola vez.");
+  }
 }
 
 export async function recalcularEstadoCobro(
