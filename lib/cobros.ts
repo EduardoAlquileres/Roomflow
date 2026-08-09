@@ -75,12 +75,16 @@ export async function actualizarCobro(
 export async function eliminarCobro(
   id: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("cobros")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.rpc("roomflow_eliminar_cobro", {
+    p_cobro_id: id,
+  });
 
-  if (error) throw error;
+  if (error) {
+    if (error.message.includes("roomflow_eliminar_cobro")) {
+      throw new Error("Falta activar el borrado seguro de cobros en Supabase. Ejecuta el archivo supabase/borrado_seguro_cobros.sql una sola vez.");
+    }
+    throw error;
+  }
 }
 
 export async function recalcularEstadoCobro(
