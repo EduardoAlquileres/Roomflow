@@ -1,6 +1,6 @@
 import { actualizarEstadoHabitacion } from "./habitaciones";
 import { actualizarInquilino } from "./inquilinos";
-import { finalizarEstancia, obtenerEstanciaActivaPorInquilino, obtenerEstanciasActivasPorHabitacion } from "./estancias";
+import { finalizarEstancia, obtenerEstanciasActivasPorHabitacion } from "./estancias";
 import { obtenerFianzaEstancia, resolverFianza } from "./fianzas";
 
 export interface CheckOutInput {
@@ -13,33 +13,46 @@ export interface CheckOutInput {
 }
 
 /**
- * Cierra el alquiler activo y deja la habitación disponible de nuevo.
+ * El alquiler pertenece a la habitación. Por ello, si hay dos titulares,
+ * el check-out termina la estancia de ambos y deja la habitación libre.
  */
 export async function realizarCheckOut({
-  inquilinoId,
   habitacionId,
   fechaSalida,
   observaciones,
   cumpleContrato,
   motivoRetencion,
 }: CheckOutInput): Promise<void> {
-  const estancia = await obtenerEstanciaActivaPorInquilino(inquilinoId);
-
-  if (estancia && estancia.fianza > 0) {
-    const fianza = await obtenerFianzaEstancia(estancia.id);
-    if (fianza) {
-      await resolverFianza(fianza.id, { fecha: fechaSalida, cumpleContrato, motivo: motivoRetencion, observaciones });
-    }
+  const estanciasActivas = await obtenerEstanciasActivasPorHabitacion(habitacionId);
+  if (!estanciasActivas.length) {
+    throw new Error("No hay una estancia activa para cerrar en esta habitación.");
   }
 
-  await actualizarInquilino(inquilinoId, {
-    activo: false,
-    fecha_salida: fechaSalida,
-    observaciones: observaciones?.trim() || null,
-  });
+  // Puede haber dos titulares, pero hay una única fianza para el alquiler.
+  // Solo se resuelve la fianza ya existente; jamás se crea una al hacer salida.
+  const fianzas = await Promise.all(
+    estanciasActivas.map((estancia) => obtenerFianzaEstancia(estancia.id))
+  );
+  const fianza = fianzas.find(Boolean);
+  if (fianza?.estado === "COBRADA") {
+    await resolverFianza(fianza.id, {
+      fecha: fechaSalida,
+      cumpleContrato,
+      motivo: motivoRetencion,
+      observaciones,
+    });
+  }
 
-  if (estancia) await finalizarEstancia(estancia.id, fechaSalida);
+  await Promise.all(
+    estanciasActivas.map(async (estancia) => {
+      await actualizarInquilino(estancia.inquilino_id, {
+        activo: false,
+        fecha_salida: fechaSalida,
+        observaciones: observaciones?.trim() || null,
+      });
+      await finalizarEstancia(estancia.id, fechaSalida);
+    })
+  );
 
-  const estanciasRestantes = await obtenerEstanciasActivasPorHabitacion(habitacionId);
-  await actualizarEstadoHabitacion(habitacionId, estanciasRestantes.length ? "OCUPADA" : "LIBRE");
+  await actualizarEstadoHabitacion(habitacionId, "LIBRE");
 }
