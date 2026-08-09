@@ -104,6 +104,24 @@ export async function crearEstancia(
 }
 
 /**
+ * Obtener todas las estancias activas de una habitación.
+ * Una habitación de pareja puede conservar otro titular activo tras un check-out.
+ */
+export async function obtenerEstanciasActivasPorHabitacion(
+  habitacionId: string
+): Promise<Estancia[]> {
+  const { data, error } = await supabase
+    .from("estancias")
+    .select("*")
+    .eq("habitacion_id", habitacionId)
+    .eq("estado", "ACTIVA");
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
+/**
  * Corregir los datos de una estancia ya registrada.
  */
 export async function actualizarEstancia(

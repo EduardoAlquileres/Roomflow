@@ -5,6 +5,7 @@ import { obtenerHabitaciones } from "@/lib/habitaciones";
 import { obtenerInquilinos } from "@/lib/inquilinos";
 import { obtenerViviendas } from "@/lib/viviendas";
 import FianzaCuotasPanel from "@/components/FianzaCuotasPanel";
+import EliminarFianzaErroneaButton from "@/components/EliminarFianzaErroneaButton";
 
 export const dynamic = "force-dynamic";
 
@@ -168,7 +169,7 @@ export default async function FianzasPage() {
                       <td className="px-5 py-4 font-semibold text-slate-900"><p>{moneda.format(Number(fianza.importe))}</p><p className="mt-1 text-sm font-normal text-blue-700">Entregado: {moneda.format(Number(fianza.importe_entregado))}</p></td>
                       <td className="px-5 py-4"><FianzaCuotasPanel fianzaId={fianza.id} estanciaId={fianza.estancia_id} importeTotal={Number(fianza.importe)} entregado={Number(fianza.importe_entregado)} fechaCobro={fianza.fecha_cobro} cuotas={cuotas.filter((cuota) => cuota.fianza_id === fianza.id)} /></td>
                       <td className="px-5 py-4 text-slate-600">{fianza.estado === "COBRADA" ? "Pendiente" : fianza.estado === "PENDIENTE_REVISION" ? "Revisar historial" : <><p>{fecha(fianza.fecha_resolucion)}</p>{fianza.motivo_retencion && <p className="mt-1 max-w-xs text-xs text-slate-500">{fianza.motivo_retencion}</p>}</>}</td>
-                      <td className="px-5 py-4"><span className={`rounded-full px-3 py-1 text-xs font-bold ${estiloEstado}`}>{nombreEstado}</span></td>
+                      <td className="px-5 py-4"><span className={`rounded-full px-3 py-1 text-xs font-bold ${estiloEstado}`}>{nombreEstado}</span>{["RETENIDA", "DEVUELTA", "PENDIENTE_REVISION"].includes(fianza.estado) && <EliminarFianzaErroneaButton fianzaId={fianza.id} nombre={inquilino ? `${inquilino.nombre} ${inquilino.apellidos}` : "este inquilino"} />}</td>
                     </tr>
                   );
                 })}

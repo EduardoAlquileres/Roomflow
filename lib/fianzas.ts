@@ -54,3 +54,13 @@ export async function resolverFianza(id: string, datos: { fecha: string; cumpleC
   if (error) throw error;
   return data;
 }
+
+export async function eliminarFianzaErronea(id: string): Promise<void> {
+  const { error } = await supabase.rpc("roomflow_eliminar_fianza_erronea", { p_fianza_id: id });
+  if (error) {
+    if (error.message.includes("roomflow_eliminar_fianza_erronea")) {
+      throw new Error("Falta activar la corrección de fianzas en Supabase. Ejecuta el archivo supabase/corregir_fianzas_erroneas.sql una sola vez.");
+    }
+    throw error;
+  }
+}

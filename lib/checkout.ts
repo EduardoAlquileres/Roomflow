@@ -1,7 +1,7 @@
 import { actualizarEstadoHabitacion } from "./habitaciones";
 import { actualizarInquilino } from "./inquilinos";
-import { finalizarEstancia, obtenerEstanciaActivaPorInquilino } from "./estancias";
-import { obtenerFianzaEstancia, registrarFianza, resolverFianza } from "./fianzas";
+import { finalizarEstancia, obtenerEstanciaActivaPorInquilino, obtenerEstanciasActivasPorHabitacion } from "./estancias";
+import { obtenerFianzaEstancia, resolverFianza } from "./fianzas";
 
 export interface CheckOutInput {
   inquilinoId: string;
@@ -26,18 +26,10 @@ export async function realizarCheckOut({
   const estancia = await obtenerEstanciaActivaPorInquilino(inquilinoId);
 
   if (estancia && estancia.fianza > 0) {
-    let fianza = await obtenerFianzaEstancia(estancia.id);
-    if (!fianza) {
-      fianza = await registrarFianza({
-        estancia_id: estancia.id,
-        inquilino_id: inquilinoId,
-        habitacion_id: habitacionId,
-        importe: estancia.fianza,
-        fecha_cobro: estancia.fecha_entrada,
-        observaciones: "Fianza registrada al regularizar el check-out.",
-      });
+    const fianza = await obtenerFianzaEstancia(estancia.id);
+    if (fianza) {
+      await resolverFianza(fianza.id, { fecha: fechaSalida, cumpleContrato, motivo: motivoRetencion, observaciones });
     }
-    await resolverFianza(fianza.id, { fecha: fechaSalida, cumpleContrato, motivo: motivoRetencion, observaciones });
   }
 
   await actualizarInquilino(inquilinoId, {
@@ -46,7 +38,8 @@ export async function realizarCheckOut({
     observaciones: observaciones?.trim() || null,
   });
 
-  await actualizarEstadoHabitacion(habitacionId, "LIBRE");
-
   if (estancia) await finalizarEstancia(estancia.id, fechaSalida);
+
+  const estanciasRestantes = await obtenerEstanciasActivasPorHabitacion(habitacionId);
+  await actualizarEstadoHabitacion(habitacionId, estanciasRestantes.length ? "OCUPADA" : "LIBRE");
 }
