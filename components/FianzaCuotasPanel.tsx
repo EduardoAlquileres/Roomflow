@@ -164,6 +164,42 @@ export default function FianzaCuotasPanel({ fianzaId, estanciaId, importeTotal, 
     }
   }
 
+  async function corregirExcesoEntregado() {
+    if (!Number.isFinite(totalPactado) || totalPactado < 0) {
+      alert("Indica una fianza pactada válida antes de corregir los pagos.");
+      return;
+    }
+    if (!confirm(`Se ajustarán las cuotas registradas y el importe entregado a ${moneda.format(totalPactado)}. ¿Continuar?`)) return;
+    const ordenadas = [...cuotas].sort((a, b) => a.fecha_prevista.localeCompare(b.fecha_prevista) || a.numero - b.numero);
+    let disponible = totalPactado;
+    const ajustadas = ordenadas.map((cuota) => {
+      const pagado = Number(Math.min(Number(cuota.importe), Math.max(disponible, 0)).toFixed(2));
+      disponible = Number((disponible - pagado).toFixed(2));
+      const pagada = pagado >= Number(cuota.importe) - 0.005;
+      return { ...cuota, importe_pagado: pagado, fecha_pago: pagado > 0 ? cuota.fecha_pago ?? new Date().toISOString().slice(0, 10) : null, estado: pagada ? "PAGADA" as const : "PENDIENTE" as const };
+    });
+    const entregadoCorregido = Number(ajustadas.reduce((suma, cuota) => suma + Number(cuota.importe_pagado), 0).toFixed(2));
+    setGuardando(true);
+    try {
+      const { error: errorCuotas } = await supabase.from("fianza_cuotas").upsert(ajustadas.map((cuota) => ({
+        id: cuota.id, fianza_id: cuota.fianza_id, numero: cuota.numero, fecha_prevista: cuota.fecha_prevista,
+        importe: Number(cuota.importe), importe_pagado: Number(cuota.importe_pagado), fecha_pago: cuota.fecha_pago, estado: cuota.estado,
+      })));
+      if (errorCuotas) throw errorCuotas;
+      const { error: errorFianza } = await supabase.from("fianzas").update({ importe: totalPactado, importe_entregado: entregadoCorregido }).eq("id", fianzaId);
+      if (errorFianza) throw errorFianza;
+      const { error: errorEstancia } = await supabase.from("estancias").update({ fianza: totalPactado }).eq("id", estanciaId);
+      if (errorEstancia) throw errorEstancia;
+      setCuotas(ajustadas);
+      setEntregadoActual(entregadoCorregido);
+      router.refresh();
+    } catch (error) {
+      alert(errorTexto(error, "No se pudo corregir el exceso de fianza."));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   async function crearPlanInicial() {
     setGuardando(true);
     try {
@@ -196,7 +232,7 @@ export default function FianzaCuotasPanel({ fianzaId, estanciaId, importeTotal, 
     {abierto && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-0 sm:items-center sm:justify-center sm:p-6">
       <section className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl">
         <div className="flex items-start justify-between gap-4"><div><h3 className="text-lg font-bold text-slate-900">Plan de pago de la fianza</h3><p className="mt-1 text-sm text-slate-500">Entregado: {moneda.format(entregadoActual)} · Pendiente según plan: {moneda.format(pendiente)}</p></div><button onClick={() => setAbierto(false)} className="rounded-lg p-2 text-slate-500"><X size={20} /></button></div>
-        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4"><label className="block text-sm font-semibold text-slate-800">Fianza pactada (€)<input inputMode="decimal" value={importePactado} onChange={(event) => setImportePactado(event.target.value)} className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2" /></label><p className="mt-2 text-xs text-slate-600">Puede ser distinta de los meses establecidos para la habitación cuando haya una condición especial.</p>{entregadoActual > 0 && <button type="button" onClick={dejarEnImporteEntregado} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-800"><CheckCircle2 size={16} /> Dejar la fianza en {moneda.format(entregadoActual)}</button>}{Math.abs(entregadoActual - entregadoSegunCuotas) > 0.01 && <button type="button" disabled={guardando} onClick={sincronizarEntregadoConCuotas} className="mt-3 ml-0 inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50 sm:ml-2"><CheckCircle2 size={16} /> Corregir entregado a {moneda.format(entregadoSegunCuotas)}</button>}</div>
+        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4"><label className="block text-sm font-semibold text-slate-800">Fianza pactada (€)<input inputMode="decimal" value={importePactado} onChange={(event) => setImportePactado(event.target.value)} className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2" /></label><p className="mt-2 text-xs text-slate-600">Puede ser distinta de los meses establecidos para la habitación cuando haya una condición especial.</p>{entregadoActual > totalPactado + 0.01 && <button type="button" disabled={guardando} onClick={corregirExcesoEntregado} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-50"><CheckCircle2 size={16} /> Corregir pagos a {moneda.format(totalPactado)}</button>}{entregadoActual > 0 && <button type="button" onClick={dejarEnImporteEntregado} className="mt-3 ml-0 inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-800 sm:ml-2"><CheckCircle2 size={16} /> Dejar la fianza en {moneda.format(entregadoActual)}</button>}{Math.abs(entregadoActual - entregadoSegunCuotas) > 0.01 && <button type="button" disabled={guardando} onClick={sincronizarEntregadoConCuotas} className="mt-3 ml-0 inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50 sm:ml-2"><CheckCircle2 size={16} /> Corregir entregado a {moneda.format(entregadoSegunCuotas)}</button>}</div>
         <div className="mt-5 space-y-3">{cuotas.map((cuota) => { const restante = Math.max(Number(cuota.importe) - Number(cuota.importe_pagado), 0); const pagada = cuota.estado === "PAGADA" || restante <= 0.005; return <article key={cuota.id} className="rounded-xl border border-slate-200 p-3"><div className="grid gap-3 sm:grid-cols-[1fr_130px_130px]"><label className="text-xs font-semibold text-slate-500">Fecha prevista<input type="date" disabled={pagada} value={cuota.fecha_prevista} onChange={(event) => setCuotas((actual) => actual.map((item) => item.id === cuota.id ? { ...item, fecha_prevista: event.target.value } : item))} className="mt-1 w-full rounded-lg border p-2 text-sm disabled:bg-slate-100" /></label><label className="text-xs font-semibold text-slate-500">Importe pactado<input type="number" min={cuota.importe_pagado} step="0.01" disabled={pagada} value={cuota.importe} onChange={(event) => setCuotas((actual) => actual.map((item) => item.id === cuota.id ? { ...item, importe: Number(event.target.value) } : item))} className="mt-1 w-full rounded-lg border p-2 text-sm disabled:bg-slate-100" /></label><div className="text-xs font-semibold text-slate-500">Estado<p className={`mt-2 text-sm ${pagada ? "text-emerald-700" : "text-blue-700"}`}>{pagada ? "Pagada" : `Pendiente ${moneda.format(restante)}`}</p></div></div>{!pagada && <div className="mt-3 flex gap-2"><input inputMode="decimal" placeholder="Importe recibido" value={pagos[cuota.id] ?? ""} onChange={(event) => setPagos((actual) => ({ ...actual, [cuota.id]: event.target.value }))} className="min-w-0 flex-1 rounded-lg border p-2 text-sm" /><button disabled={guardando} onClick={() => registrarPago(cuota)} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Registrar</button></div>}</article>; })}</div>
         <div className="mt-5 flex flex-wrap justify-between gap-3 border-t pt-4"><button type="button" onClick={anadirCuota} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"><Plus size={16} /> Añadir cuota</button><div className="flex gap-3"><button onClick={() => setAbierto(false)} className="rounded-lg border px-4 py-2 text-sm font-medium">Cerrar</button><button disabled={guardando} onClick={guardarPlan} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Pencil size={16} /> Guardar plan</button></div></div>
       </section>
