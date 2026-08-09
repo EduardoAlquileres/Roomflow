@@ -29,6 +29,7 @@ type Inquilino = {
   id: string;
   habitacion_id: string;
   activo: boolean;
+  fecha_entrada: string;
 };
 
 export default function HabitacionesPage() {
@@ -95,7 +96,33 @@ export default function HabitacionesPage() {
       return;
     }
 
-    setHabitaciones(habitacionesData ?? []);
+    const hoy = new Date().toISOString().slice(0, 10);
+    const habitacionesOcupadas = new Set(
+      (inquilinosData ?? [])
+        .filter((inquilino) => inquilino.fecha_entrada <= hoy)
+        .map((inquilino) => inquilino.habitacion_id)
+    );
+    const habitacionesNormalizadas = (habitacionesData ?? []).map((habitacion) =>
+      habitacionesOcupadas.has(habitacion.id) && habitacion.estado !== "OCUPADA"
+        ? { ...habitacion, estado: "OCUPADA" as const }
+        : habitacion
+    );
+    const estadosDesajustados = habitacionesNormalizadas.filter(
+      (habitacion, indice) => habitacion.estado !== habitacionesData?.[indice]?.estado
+    );
+
+    // Repara estados antiguos que quedaron libres pese a tener un inquilino ya entrado.
+    if (estadosDesajustados.length) {
+      const resultados = await Promise.all(
+        estadosDesajustados.map((habitacion) =>
+          supabase.from("habitaciones").update({ estado: "OCUPADA" }).eq("id", habitacion.id)
+        )
+      );
+      const errorEstado = resultados.find((resultado) => resultado.error)?.error;
+      if (errorEstado) console.error("No se pudo corregir el estado de alguna habitación", errorEstado);
+    }
+
+    setHabitaciones(habitacionesNormalizadas);
     setViviendas(viviendasData ?? []);
     setInquilinos(inquilinosData ?? []);
 
