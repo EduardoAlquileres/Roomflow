@@ -82,6 +82,8 @@ type EstanciaResumen = {
   fecha_salida: string | null;
 };
 
+type FiltroEstadoCobro = "ABIERTOS" | "" | Cobro["estado"];
+
 type Inquilino = {
   id: string;
   nombre: string;
@@ -131,7 +133,7 @@ async function eliminarCobroSeleccionado(id: string) {
   const [cobros, setCobros] = useState<Cobro[]>([]);
   const [filtroVivienda, setFiltroVivienda] = useState("");
   const [filtroHabitacion, setFiltroHabitacion] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState<"" | Cobro["estado"]>("");
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstadoCobro>("ABIERTOS");
 
   const [habitaciones, setHabitaciones] = useState<Habitacion[]>([]);
 
@@ -164,7 +166,8 @@ const [cobroHistorial, setCobroHistorial] =
 
     if (filtroVivienda && habitacion?.vivienda_id !== filtroVivienda) return false;
     if (filtroHabitacion && cobro.habitacion_id !== filtroHabitacion) return false;
-    if (filtroEstado && cobro.estado !== filtroEstado) return false;
+    if (filtroEstado === "ABIERTOS" && cobro.estado === "PAGADO") return false;
+    if (filtroEstado && filtroEstado !== "ABIERTOS" && cobro.estado !== filtroEstado) return false;
 
     return true;
   });
@@ -448,7 +451,7 @@ async function guardarPago(datos: {
    {vistaActiva === "COBROS" && <>
    <div style={{ marginBottom: 16 }}>
      <h2 style={{ margin: 0, fontSize: 20 }}>Listado de cobros</h2>
-     <p style={{ margin: "6px 0 0", color: "#64748b" }}>Gestiona pagos, recibos, historial y correcciones de cada habitación.</p>
+     <p style={{ margin: "6px 0 0", color: "#64748b" }}>{filtroVivienda || filtroHabitacion ? "Historial de la selección: incluye también los cobros pagados." : "Vista de trabajo: solo pendientes y parciales. Selecciona una vivienda o habitación para consultar su historial."}</p>
    </div>
    <div className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
      <label className="flex min-w-52 flex-1 flex-col gap-1 text-sm font-medium text-slate-700 max-sm:min-w-0 max-sm:flex-none max-sm:w-full">
@@ -459,6 +462,7 @@ async function guardarPago(datos: {
          onChange={(event) => {
            setFiltroVivienda(event.target.value);
            setFiltroHabitacion("");
+           setFiltroEstado("");
          }}
        >
          <option value="">Todas las viviendas</option>
@@ -472,7 +476,10 @@ async function guardarPago(datos: {
        <select
          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 outline-none focus:border-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
          value={filtroHabitacion}
-         onChange={(event) => setFiltroHabitacion(event.target.value)}
+         onChange={(event) => {
+           setFiltroHabitacion(event.target.value);
+           if (event.target.value) setFiltroEstado("");
+         }}
          disabled={habitacionesDisponibles.length === 0}
        >
          <option value="">Todas las habitaciones</option>
@@ -486,9 +493,10 @@ async function guardarPago(datos: {
        <select
          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-base font-normal text-slate-900 outline-none focus:border-blue-500"
          value={filtroEstado}
-         onChange={(event) => setFiltroEstado(event.target.value as "" | Cobro["estado"])}
+         onChange={(event) => setFiltroEstado(event.target.value as FiltroEstadoCobro)}
        >
-         <option value="">Todos los estados</option>
+         <option value="ABIERTOS">Pendientes y parciales</option>
+         <option value="">Todos los estados (historial)</option>
          <option value="PENDIENTE">Pendiente</option>
          <option value="PARCIAL">Parcial</option>
          <option value="PAGADO">Pagado</option>
@@ -503,7 +511,7 @@ async function guardarPago(datos: {
            onClick={() => {
              setFiltroVivienda("");
              setFiltroHabitacion("");
-             setFiltroEstado("");
+             setFiltroEstado("ABIERTOS");
            }}
          >
            Limpiar filtros
