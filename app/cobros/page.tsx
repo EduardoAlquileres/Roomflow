@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Wallet,
   Euro,
@@ -92,6 +92,11 @@ type Inquilino = {
   habitacion_id: string;
 };
 
+type ResumenViviendaMes = Resumen & {
+  viviendaId: string;
+  nombre: string;
+};
+
 export default function CobrosPage() {
   const [cargando, setCargando] = useState(true);
   const [vistaActiva, setVistaActiva] = useState<"RESUMEN" | "COBROS" | "GASTOS">("RESUMEN");
@@ -176,6 +181,29 @@ const [cobroHistorial, setCobroHistorial] =
   const cobrosDelAnio = cobros.filter(
     (cobro) => cobro.periodo_anio === anioActual
   );
+  const resumenViviendasMes = useMemo(() => {
+    const mesActual = fechaActual.getMonth() + 1;
+
+    return viviendas.map((vivienda) => {
+      const habitacionesVivienda = new Set(
+        habitaciones
+          .filter((habitacion) => habitacion.vivienda_id === vivienda.id)
+          .map((habitacion) => habitacion.id)
+      );
+      const cobrosVivienda = cobros.filter(
+        (cobro) =>
+          cobro.periodo_mes === mesActual &&
+          cobro.periodo_anio === anioActual &&
+          habitacionesVivienda.has(cobro.habitacion_id)
+      );
+
+      return {
+        viviendaId: vivienda.id,
+        nombre: vivienda.nombre,
+        ...calcularResumen(cobrosVivienda),
+      };
+    });
+  }, [anioActual, cobros, fechaActual, habitaciones, viviendas]);
   const mediaMensualCobrada = resumenAnual.cobradas / (fechaActual.getMonth() + 1);
   const cobradoPorMes = cobrosDelAnio.reduce<Record<number, number>>(
     (acumulado, cobro) => ({
@@ -404,6 +432,8 @@ async function guardarPago(datos: {
         icono={<Wallet size={22} color="#ea580c" />}
       />
     </div>
+
+    <PanelCobrosPorVivienda viviendas={resumenViviendasMes} />
 
     <div style={{ margin: "38px 0 16px" }}>
       <h2 style={{ margin: 0, fontSize: 20 }}>Cobro real del año · {anioActual}</h2>
@@ -642,6 +672,32 @@ function BotonVista({ activa, onClick, icono, texto }: { activa: boolean; onClic
       {icono}
       {texto}
     </button>
+  );
+}
+
+function PanelCobrosPorVivienda({ viviendas }: { viviendas: ResumenViviendaMes[] }) {
+  return (
+    <section className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <div className="flex items-center gap-3">
+        <div className="rounded-lg bg-blue-100 p-2 text-blue-700"><Building2 size={20} /></div>
+        <div>
+          <h2 className="font-bold text-slate-900">Cobros del mes por vivienda</h2>
+          <p className="text-sm text-slate-500">Previsto, recibido y pendiente en cada vivienda.</p>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {viviendas.map((vivienda) => (
+          <article key={vivienda.viviendaId} className="rounded-xl border border-slate-200 p-4">
+            <h3 className="font-semibold text-slate-900">{vivienda.nombre}</h3>
+            <div className="mt-4 space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Previsto</span><strong className="text-slate-900">{formatoKpiCobro.format(vivienda.previstas)}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Cobrado</span><strong className="text-green-700">{formatoKpiCobro.format(vivienda.cobradas)}</strong></div>
+              <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2"><span className="font-medium text-slate-600">Pendiente</span><strong className={vivienda.pendientes > 0 ? "text-red-600" : "text-slate-900"}>{formatoKpiCobro.format(vivienda.pendientes)}</strong></div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
