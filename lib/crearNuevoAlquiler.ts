@@ -241,7 +241,12 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
       .select("id")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "42501" && error.message.includes("cobros")) {
+        throw new Error("Supabase no tiene permiso para crear cobros. Ejecuta el archivo supabase/activar_escritura_cobros.sql una sola vez y vuelve a guardar el alquiler.");
+      }
+      throw error;
+    }
     cobroId = data.id;
   }
 
