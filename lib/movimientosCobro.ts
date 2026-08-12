@@ -89,6 +89,8 @@ export async function actualizarCobroDesdeMovimientos(
 
   if (pendiente <= 0) {
     estado = "PAGADO";
+  } else if (cobro.estado === "DEUDA") {
+    estado = "DEUDA";
   } else if (totalPagado > 0) {
     estado = "PARCIAL";
   }

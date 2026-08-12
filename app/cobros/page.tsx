@@ -19,6 +19,7 @@ import {
   crearCobro,
   obtenerCobros,
   eliminarCobro,
+  marcarCobroComoDeuda,
 } from "@/lib/cobros";
 
 import CobrosTable from "@/components/CobrosTable";
@@ -171,7 +172,7 @@ const [cobroHistorial, setCobroHistorial] =
 
     if (filtroVivienda && habitacion?.vivienda_id !== filtroVivienda) return false;
     if (filtroHabitacion && cobro.habitacion_id !== filtroHabitacion) return false;
-    if (filtroEstado === "ABIERTOS" && cobro.estado === "PAGADO") return false;
+    if (filtroEstado === "ABIERTOS" && (cobro.estado === "PAGADO" || cobro.estado === "DEUDA")) return false;
     if (filtroEstado && filtroEstado !== "ABIERTOS" && cobro.estado !== filtroEstado) return false;
 
     return true;
@@ -287,6 +288,21 @@ async function guardarPago(datos: {
       setGuardandoNuevoCobro(false);
     }
   }
+
+  async function convertirEnDeuda(cobro: Cobro) {
+    const confirmar = window.confirm(
+      `¿Marcar los ${formatoKpiCobro.format(Number(cobro.pendiente))} pendientes como deuda? No se contará como cobrado y quedará en el historial de deudas.`
+    );
+    if (!confirmar) return;
+
+    try {
+      await marcarCobroComoDeuda(cobro.id);
+      await cargarDatos();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "No se pudo marcar el cobro como deuda.");
+    }
+  }
+
   async function cargarDatos() {
     setCargando(true);
 
@@ -530,6 +546,7 @@ async function guardarPago(datos: {
          <option value="PENDIENTE">Pendiente</option>
          <option value="PARCIAL">Parcial</option>
          <option value="PAGADO">Pagado</option>
+         <option value="DEUDA">Deuda pendiente</option>
        </select>
      </label>
      <div className="flex w-full items-center gap-3 pb-1 text-sm text-slate-500 sm:w-auto">
@@ -567,6 +584,7 @@ async function guardarPago(datos: {
     setHistorialAbierto(true);
   }}
   onEliminar={eliminarCobroSeleccionado}
+  onMarcarDeuda={convertirEnDeuda}
 />
    </>}
    {vistaActiva === "GASTOS" && <BalanceGastosViviendas cobros={cobros} gastos={gastosVivienda} habitaciones={habitaciones} viviendas={viviendas} />}

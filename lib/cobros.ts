@@ -87,12 +87,31 @@ export async function eliminarCobro(
   }
 }
 
+/** Marca el saldo no cobrado como deuda tras la salida de la habitación. */
+export async function marcarCobroComoDeuda(id: string): Promise<Cobro> {
+  const { data, error } = await supabase
+    .from("cobros")
+    .update({ estado: "DEUDA" })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.message.includes("DEUDA") || error.message.includes("check")) {
+      throw new Error("Falta activar las deudas en Supabase. Ejecuta el archivo supabase/deudas_cobros.sql una sola vez.");
+    }
+    throw error;
+  }
+
+  return data as Cobro;
+}
+
 export async function recalcularEstadoCobro(
   cobroId: string
 ): Promise<void> {
   const { data: cobro, error } = await supabase
     .from("cobros")
-    .select("total")
+    .select("total, estado")
     .eq("id", cobroId)
     .single();
 
@@ -118,6 +137,8 @@ export async function recalcularEstadoCobro(
 
   if (pendiente <= 0) {
     estado = "PAGADO";
+  } else if (cobro.estado === "DEUDA") {
+    estado = "DEUDA";
   } else if (pagado > 0) {
     estado = "PARCIAL";
   }

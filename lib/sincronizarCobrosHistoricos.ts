@@ -28,7 +28,13 @@ export async function sincronizarCobrosHistoricos(): Promise<ResultadoSincroniza
     const { alquiler, gastos, total } = importesCobroPeriodo(estancia, personas, cobro.periodo_anio, cobro.periodo_mes);
     const pagado = Number(cobro.pagado);
     const pendiente = Math.max(total - pagado, 0);
-    const estado: Cobro["estado"] = pendiente === 0 ? "PAGADO" : pagado > 0 ? "PARCIAL" : "PENDIENTE";
+    const estado: Cobro["estado"] = pendiente === 0
+      ? "PAGADO"
+      : cobro.estado === "DEUDA"
+        ? "DEUDA"
+        : pagado > 0
+          ? "PARCIAL"
+          : "PENDIENTE";
     const hayCambios = cobro.habitacion_id !== estancia.habitacion_id
       || Number(cobro.alquiler) !== alquiler
       || Number(cobro.gastos) !== gastos

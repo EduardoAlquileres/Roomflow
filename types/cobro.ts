@@ -1,7 +1,8 @@
 export type EstadoCobro =
   | "PENDIENTE"
   | "PARCIAL"
-  | "PAGADO";
+  | "PAGADO"
+  | "DEUDA";
 
 export interface Cobro {
   id: string;
