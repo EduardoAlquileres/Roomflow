@@ -39,6 +39,7 @@ type Resumen = {
   previstas: number;
   cobradas: number;
   pendientes: number;
+  deudas: number;
   habitacionesPendientes: number;
 };
 
@@ -53,9 +54,14 @@ function calcularResumen(cobros: Cobro[]): Resumen {
   return {
     previstas: cobros.reduce((suma, cobro) => suma + Number(cobro.total), 0),
     cobradas: cobros.reduce((suma, cobro) => suma + Number(cobro.pagado), 0),
-    pendientes: cobros.reduce((suma, cobro) => suma + Number(cobro.pendiente), 0),
+    pendientes: cobros
+      .filter((cobro) => cobro.estado !== "DEUDA")
+      .reduce((suma, cobro) => suma + Number(cobro.pendiente), 0),
+    deudas: cobros
+      .filter((cobro) => cobro.estado === "DEUDA")
+      .reduce((suma, cobro) => suma + Number(cobro.pendiente), 0),
     habitacionesPendientes: new Set(
-      cobros.filter((cobro) => cobro.estado !== "PAGADO").map((cobro) => cobro.habitacion_id)
+      cobros.filter((cobro) => cobro.estado !== "PAGADO" && cobro.estado !== "DEUDA").map((cobro) => cobro.habitacion_id)
     ).size,
   };
 }
@@ -107,12 +113,14 @@ export default function CobrosPage() {
     previstas: 0,
     cobradas: 0,
     pendientes: 0,
+    deudas: 0,
     habitacionesPendientes: 0,
   });
   const [resumenAnual, setResumenAnual] = useState<Resumen>({
     previstas: 0,
     cobradas: 0,
     pendientes: 0,
+    deudas: 0,
     habitacionesPendientes: 0,
   });
 async function eliminarCobroSeleccionado(id: string) {
@@ -443,6 +451,12 @@ async function guardarPago(datos: {
       />
 
       <Tarjeta
+        titulo="Deuda no cobrada"
+        valor={formatoKpiCobro.format(resumen.deudas)}
+        icono={<AlertTriangle size={22} color="#7c3aed" />}
+      />
+
+      <Tarjeta
         titulo="Habitaciones con pendiente"
         valor={String(resumen.habitacionesPendientes)}
         icono={<Wallet size={22} color="#ea580c" />}
@@ -700,7 +714,7 @@ function PanelCobrosPorVivienda({ viviendas }: { viviendas: ResumenViviendaMes[]
         <div className="rounded-lg bg-blue-100 p-2 text-blue-700"><Building2 size={20} /></div>
         <div>
           <h2 className="font-bold text-slate-900">Cobros del mes por vivienda</h2>
-          <p className="text-sm text-slate-500">Previsto, recibido y pendiente en cada vivienda.</p>
+          <p className="text-sm text-slate-500">Previsto, recibido, pendiente y deuda no cobrada en cada vivienda.</p>
         </div>
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -711,6 +725,7 @@ function PanelCobrosPorVivienda({ viviendas }: { viviendas: ResumenViviendaMes[]
               <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Previsto</span><strong className="text-slate-900">{formatoKpiCobro.format(vivienda.previstas)}</strong></div>
               <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Cobrado</span><strong className="text-green-700">{formatoKpiCobro.format(vivienda.cobradas)}</strong></div>
               <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2"><span className="font-medium text-slate-600">Pendiente</span><strong className={vivienda.pendientes > 0 ? "text-red-600" : "text-slate-900"}>{formatoKpiCobro.format(vivienda.pendientes)}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="font-medium text-slate-600">Deuda no cobrada</span><strong className={vivienda.deudas > 0 ? "text-violet-700" : "text-slate-900"}>{formatoKpiCobro.format(vivienda.deudas)}</strong></div>
             </div>
           </article>
         ))}
