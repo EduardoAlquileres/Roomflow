@@ -20,8 +20,10 @@ function sumarMes(fecha: Date) {
   return new Date(Date.UTC(fecha.getUTCFullYear(), fecha.getUTCMonth() + 1, 1));
 }
 
-function clavePeriodo(habitacionId: string, anio: number, mes: number) {
-  return `${habitacionId}-${anio}-${mes}`;
+function clavePeriodo(estancia: EstanciaEconomica, anio: number, mes: number) {
+  // Dos titulares que entran juntos comparten cobro, pero un cambio de
+  // inquilino dentro del mismo mes debe generar una mensualidad diferente.
+  return `${estancia.habitacion_id}-${anio}-${mes}-${estancia.fecha_entrada}`;
 }
 
 function fechaVencimiento(periodo: Date, entrada: string) {
@@ -70,9 +72,19 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
 
   const { data: cobrosExistentes, error: errorCobros } = await supabase
     .from("cobros")
-    .select("habitacion_id, periodo_anio, periodo_mes");
+    .select("habitacion_id, inquilino_id, periodo_anio, periodo_mes");
   if (errorCobros) throw errorCobros;
-  const existentes = new Set((cobrosExistentes ?? []).map((cobro) => clavePeriodo(cobro.habitacion_id, cobro.periodo_anio, cobro.periodo_mes)));
+  const existentes = new Set(
+    (cobrosExistentes ?? []).flatMap((cobro) => {
+      const estancia = estanciaParaPeriodo(
+        todasLasEstancias,
+        cobro.inquilino_id,
+        cobro.periodo_anio,
+        cobro.periodo_mes
+      );
+      return estancia ? [clavePeriodo(estancia, cobro.periodo_anio, cobro.periodo_mes)] : [];
+    })
+  );
 
   const limite = primerDiaMes(hasta);
   const inquilinos = [...new Set(todasLasEstancias.map((estancia) => estancia.inquilino_id))];
@@ -87,7 +99,7 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
       const mes = periodo.getUTCMonth() + 1;
       const estancia = estanciaParaPeriodo(todasLasEstancias, inquilinoId, anio, mes);
       if (!estancia) continue;
-      const clave = clavePeriodo(estancia.habitacion_id, anio, mes);
+      const clave = clavePeriodo(estancia, anio, mes);
       if (existentes.has(clave)) continue;
 
       const personas = Math.max(1, personasEnHabitacionPeriodo(todasLasEstancias, estancia.habitacion_id, anio, mes));
