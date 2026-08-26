@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { actualizarInquilino } from "@/lib/inquilinos";
 import { actualizarEstancia, crearEstancia, obtenerEstanciaActivaPorInquilino } from "@/lib/estancias";
+import { actualizarEstadoHabitacion } from "@/lib/habitaciones";
 
 type Props = {
   inquilinoId: string;
@@ -56,6 +57,7 @@ export default function EditarCheckInForm({ inquilinoId, habitacionId, fechaEntr
       } else {
         await crearEstancia({ inquilino_id: inquilinoId, habitacion_id: habitacionId, fecha_entrada: fechaEntrada, fecha_salida: null, precio, gastos, fianza: importeFianza, estado: "ACTIVA", observaciones: observaciones.trim() || null });
       }
+      await actualizarEstadoHabitacion(habitacionId, "OCUPADA");
       setAbierto(false);
       router.refresh();
     } catch (error) {
