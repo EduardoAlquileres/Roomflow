@@ -102,7 +102,7 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
       const clave = clavePeriodo(estancia, anio, mes);
       if (existentes.has(clave)) continue;
 
-      const personas = Math.max(1, personasEnHabitacionPeriodo(todasLasEstancias, estancia.habitacion_id, anio, mes));
+      const personas = Math.max(1, personasEnHabitacionPeriodo(todasLasEstancias, estancia.habitacion_id, anio, mes, estancia.fecha_entrada));
       const { alquiler, gastos, total } = importesCobroPeriodo(estancia, personas, anio, mes);
       nuevos.push({ habitacion_id: estancia.habitacion_id, inquilino_id: estancia.inquilino_id, periodo_mes: mes, periodo_anio: anio, alquiler, gastos, total, pagado: 0, pendiente: total, estado: "PENDIENTE", fecha_vencimiento: fechaVencimiento(periodo, estancia.fecha_entrada), observaciones: "Cobro mensual generado automáticamente según la estancia del periodo." });
       existentes.add(clave);

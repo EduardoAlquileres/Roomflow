@@ -24,7 +24,7 @@ export async function sincronizarCobrosHistoricos(): Promise<ResultadoSincroniza
     const estancia = estanciaParaPeriodo(estancias, cobro.inquilino_id, cobro.periodo_anio, cobro.periodo_mes);
     if (!estancia) continue;
 
-    const personas = Math.max(1, personasEnHabitacionPeriodo(estancias, estancia.habitacion_id, cobro.periodo_anio, cobro.periodo_mes));
+    const personas = Math.max(1, personasEnHabitacionPeriodo(estancias, estancia.habitacion_id, cobro.periodo_anio, cobro.periodo_mes, estancia.fecha_entrada));
     const { alquiler, gastos, total } = importesCobroPeriodo(estancia, personas, cobro.periodo_anio, cobro.periodo_mes);
     const pagado = Number(cobro.pagado);
     const pendiente = Math.max(total - pagado, 0);

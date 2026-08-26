@@ -56,7 +56,7 @@ export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquili
         : { data: [], error: null };
       if (errorPersonas) { alert(errorPersonas.message); return; }
       titulares = (personasData ?? []) as Persona[];
-      gastos = Number(estancia.gastos) * Math.max(1, personasEnHabitacionPeriodo(estancias, estancia.habitacion_id, cobro.periodo_anio, cobro.periodo_mes));
+      gastos = Number(estancia.gastos) * Math.max(1, personasEnHabitacionPeriodo(estancias, estancia.habitacion_id, cobro.periodo_anio, cobro.periodo_mes, estancia.fecha_entrada));
     }
 
     if (!viviendaRecibo) { alert("No se ha encontrado la vivienda de este cobro."); return; }

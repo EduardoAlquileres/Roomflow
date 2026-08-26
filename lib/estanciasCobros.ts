@@ -35,11 +35,22 @@ export function estanciaParaPeriodo(estancias: EstanciaEconomica[], inquilinoId:
   return ordenadas[0] ?? null;
 }
 
-export function personasEnHabitacionPeriodo(estancias: EstanciaEconomica[], habitacionId: string, anio: number, mes: number) {
+export function personasEnHabitacionPeriodo(
+  estancias: EstanciaEconomica[],
+  habitacionId: string,
+  anio: number,
+  mes: number,
+  fechaEntradaGrupo?: string
+) {
   const personas = new Set<string>();
   for (const estancia of estancias) {
     const vigente = estanciaParaPeriodo(estancias, estancia.inquilino_id, anio, mes);
-    if (vigente?.habitacion_id === habitacionId) personas.add(estancia.inquilino_id);
+    if (
+      vigente?.habitacion_id === habitacionId &&
+      (!fechaEntradaGrupo || vigente.fecha_entrada === fechaEntradaGrupo)
+    ) {
+      personas.add(estancia.inquilino_id);
+    }
   }
   return personas.size;
 }
