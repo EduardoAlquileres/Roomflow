@@ -1,6 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import {
   Bell,
   Search,
@@ -15,8 +17,94 @@ import {
   LogOut,
 } from "lucide-react";
 
+type ResultadoBusqueda = {
+  id: string;
+  tipo: "Vivienda" | "Habitación" | "Inquilino";
+  titulo: string;
+  detalle: string;
+  href: string;
+  textoBusqueda: string;
+};
+
+function normalizar(texto: string) {
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 export default function Header({ alAbrirMenu }: { alAbrirMenu: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [consulta, setConsulta] = useState("");
+  const [opciones, setOpciones] = useState<ResultadoBusqueda[]>([]);
+  const [cargandoBusqueda, setCargandoBusqueda] = useState(false);
+  const [busquedaCargada, setBusquedaCargada] = useState(false);
+  const [busquedaAbierta, setBusquedaAbierta] = useState(false);
+
+  const resultados = useMemo(() => {
+    const termino = normalizar(consulta.trim());
+    if (termino.length < 2) return [];
+    return opciones.filter((opcion) => normalizar(opcion.textoBusqueda).includes(termino)).slice(0, 8);
+  }, [consulta, opciones]);
+
+  async function cargarBusqueda() {
+    setBusquedaAbierta(true);
+    if (busquedaCargada || cargandoBusqueda) return;
+    setCargandoBusqueda(true);
+
+    try {
+      const [viviendasRespuesta, habitacionesRespuesta, inquilinosRespuesta] = await Promise.all([
+        supabase.from("viviendas").select("id, nombre, direccion").order("nombre"),
+        supabase.from("habitaciones").select("id, codigo, vivienda_id").order("codigo"),
+        supabase.from("inquilinos").select("id, nombre, apellidos, documento, activo").order("apellidos"),
+      ]);
+
+      const error = viviendasRespuesta.error ?? habitacionesRespuesta.error ?? inquilinosRespuesta.error;
+      if (error) throw error;
+
+      const viviendas = viviendasRespuesta.data ?? [];
+      const nombresViviendas = new Map(viviendas.map((vivienda) => [vivienda.id, vivienda.nombre]));
+
+      setOpciones([
+        ...viviendas.map((vivienda) => ({
+          id: `vivienda-${vivienda.id}`,
+          tipo: "Vivienda" as const,
+          titulo: vivienda.nombre,
+          detalle: vivienda.direccion || "Vivienda",
+          href: `/viviendas/${vivienda.id}`,
+          textoBusqueda: `${vivienda.nombre} ${vivienda.direccion ?? ""}`,
+        })),
+        ...(habitacionesRespuesta.data ?? []).map((habitacion) => {
+          const vivienda = nombresViviendas.get(habitacion.vivienda_id) ?? "Vivienda";
+          return {
+            id: `habitacion-${habitacion.id}`,
+            tipo: "Habitación" as const,
+            titulo: habitacion.codigo,
+            detalle: vivienda,
+            href: `/habitaciones/${habitacion.id}`,
+            textoBusqueda: `${habitacion.codigo} ${vivienda}`,
+          };
+        }),
+        ...(inquilinosRespuesta.data ?? []).map((inquilino) => ({
+          id: `inquilino-${inquilino.id}`,
+          tipo: "Inquilino" as const,
+          titulo: `${inquilino.nombre} ${inquilino.apellidos}`,
+          detalle: `${inquilino.documento} · ${inquilino.activo ? "Activo" : "Histórico"}`,
+          href: `/inquilinos/${inquilino.id}`,
+          textoBusqueda: `${inquilino.nombre} ${inquilino.apellidos} ${inquilino.documento}`,
+        })),
+      ]);
+      setBusquedaCargada(true);
+    } catch (error) {
+      console.error("No se pudo cargar el buscador", error);
+    } finally {
+      setCargandoBusqueda(false);
+    }
+  }
+
+  function abrirResultado(resultado: ResultadoBusqueda) {
+    setConsulta("");
+    setBusquedaAbierta(false);
+    router.push(resultado.href);
+  }
 
   function getTitulo() {
     switch (pathname) {
@@ -141,7 +229,12 @@ export default function Header({ alAbrirMenu }: { alAbrirMenu: () => void }) {
         }}
       >
         <div className="rf-search"
+          onFocus={cargarBusqueda}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setBusquedaAbierta(false);
+          }}
           style={{
+            position: "relative",
             display: "flex",
             alignItems: "center",
             gap: 10,
@@ -159,6 +252,16 @@ export default function Header({ alAbrirMenu }: { alAbrirMenu: () => void }) {
 
           <input
             placeholder="Buscar..."
+            value={consulta}
+            onChange={(event) => {
+              setConsulta(event.target.value);
+              setBusquedaAbierta(true);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && resultados[0]) abrirResultado(resultados[0]);
+              if (event.key === "Escape") setBusquedaAbierta(false);
+            }}
+            aria-label="Buscar viviendas, habitaciones o inquilinos"
             style={{
               border: "none",
               outline: "none",
@@ -167,6 +270,29 @@ export default function Header({ alAbrirMenu }: { alAbrirMenu: () => void }) {
               fontSize: 14,
             }}
           />
+
+          {busquedaAbierta && consulta.trim().length >= 2 && (
+            <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-full min-w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              {cargandoBusqueda && <p className="px-4 py-3 text-sm text-slate-500">Buscando...</p>}
+              {!cargandoBusqueda && resultados.length === 0 && (
+                <p className="px-4 py-3 text-sm text-slate-500">No se encontraron resultados.</p>
+              )}
+              {resultados.map((resultado) => (
+                <button
+                  key={resultado.id}
+                  type="button"
+                  onClick={() => abrirResultado(resultado)}
+                  className="flex w-full items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-blue-50"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-slate-900">{resultado.titulo}</span>
+                    <span className="block truncate text-xs text-slate-500">{resultado.detalle}</span>
+                  </span>
+                  <span className="shrink-0 text-xs font-medium text-blue-700">{resultado.tipo}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <button className="rf-notification"
