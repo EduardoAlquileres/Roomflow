@@ -124,7 +124,14 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
       return;
     }
     const mensaje = [`Hola ${destinatario.nombre},`, "", ...detalleMensaje].join("\n");
-    window.location.assign(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`);
+    const ventana = window.open(
+      `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+    if (!ventana) {
+      alert("El navegador ha bloqueado la nueva pestaña de WhatsApp. Permite abrir enlaces en otra pestaña e inténtalo de nuevo.");
+    }
   }
 
   return (
