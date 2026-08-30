@@ -92,7 +92,7 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
         (cobro) => `• Recibo de ${meses[cobro.periodo_mes - 1]} de ${cobro.periodo_anio}: ${moneda.format(Number(cobro.pendiente))}`
       );
       const detalle = [
-        "🤖 Mensaje automático generado por la aplicación.",
+        "Mensaje automático generado por la aplicación.",
         "",
         "Te informamos de los importes que figuran pendientes en la aplicación:",
         "",
@@ -100,6 +100,8 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
         ...(pendienteFianza > 0.005 ? [`• Fianza pendiente: ${moneda.format(pendienteFianza)}`] : []),
         "",
         `Total pendiente: ${moneda.format(totalPendiente)}`,
+        "",
+        "Recuerda que los pagos deben efectuarse entre los días 1 y 5 de cada mes.",
         "",
         "Si ya has realizado algún pago, por favor envíanos el justificante para actualizarlo. Gracias.",
       ];
