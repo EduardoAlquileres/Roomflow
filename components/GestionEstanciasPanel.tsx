@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CalendarRange, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { sincronizarCobrosHistoricos } from "@/lib/sincronizarCobrosHistoricos";
 import { Estancia, Habitacion, Vivienda } from "@/types";
 
 type Props = {
@@ -21,6 +22,9 @@ type Formulario = {
   fechaSalida: string;
   precio: string;
   gastos: string;
+  precioOriginal: number | null;
+  gastosOriginales: number | null;
+  alcanceEconomico: "FUTURO" | "RETROACTIVO";
 };
 
 const fechaCampo = (fecha: string | null) => fecha?.slice(0, 10) ?? "";
@@ -62,6 +66,9 @@ export default function GestionEstanciasPanel({
       fechaSalida: "",
       precio: String(habitacion?.precio ?? ""),
       gastos: String(habitacion?.gastos ?? ""),
+      precioOriginal: null,
+      gastosOriginales: null,
+      alcanceEconomico: "FUTURO",
     });
   }
 
@@ -75,6 +82,9 @@ export default function GestionEstanciasPanel({
       fechaSalida: fechaCampo(estancia.fecha_salida),
       precio: String(estancia.precio),
       gastos: String(estancia.gastos),
+      precioOriginal: Number(estancia.precio),
+      gastosOriginales: Number(estancia.gastos),
+      alcanceEconomico: "FUTURO",
     });
   }
 
@@ -112,6 +122,10 @@ export default function GestionEstanciasPanel({
       gastos: Number(formulario.gastos),
       estado: formulario.esActiva ? "ACTIVA" : "FINALIZADA",
     };
+    const cambiaImporte = formulario.id !== null && (
+      formulario.precioOriginal !== Number(formulario.precio)
+      || formulario.gastosOriginales !== Number(formulario.gastos)
+    );
     const respuesta = formulario.id
       ? await supabase.from("estancias").update(valores).eq("id", formulario.id)
       : await supabase.from("estancias").insert({
@@ -125,6 +139,15 @@ export default function GestionEstanciasPanel({
     if (respuesta.error) {
       setError(respuesta.error.message);
       return;
+    }
+    if (cambiaImporte && formulario.alcanceEconomico === "RETROACTIVO") {
+      try {
+        await sincronizarCobrosHistoricos(inquilinoId);
+      } catch (errorSincronizacion) {
+        setGuardando(false);
+        setError(errorSincronizacion instanceof Error ? errorSincronizacion.message : "No se pudieron recalcular los recibos anteriores.");
+        return;
+      }
     }
     setFormulario(null);
     onActualizado();
@@ -203,6 +226,19 @@ export default function GestionEstanciasPanel({
               <label className="text-sm font-medium text-slate-700">Alquiler mensual<input type="number" min="0" step="0.01" value={formulario.precio} onChange={(event) => setFormulario({ ...formulario, precio: event.target.value })} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
               <label className="text-sm font-medium text-slate-700">Gastos por persona<input type="number" min="0" step="0.01" value={formulario.gastos} onChange={(event) => setFormulario({ ...formulario, gastos: event.target.value })} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
             </div>
+            {formulario.id && (formulario.precioOriginal !== Number(formulario.precio) || formulario.gastosOriginales !== Number(formulario.gastos)) && (
+              <fieldset className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <legend className="px-1 text-sm font-bold text-slate-900">¿Desde cuándo debe aplicarse el cambio?</legend>
+                <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-lg bg-white p-3 ring-1 ring-amber-100">
+                  <input type="radio" name="alcanceEconomico" value="FUTURO" checked={formulario.alcanceEconomico === "FUTURO"} onChange={() => setFormulario({ ...formulario, alcanceEconomico: "FUTURO" })} className="mt-1" />
+                  <span><strong className="block text-slate-900">Solo recibos futuros (recomendado)</strong><span className="mt-1 block text-sm text-slate-600">Los recibos que ya existen y sus pagos no se modificarán. El nuevo importe se usará al generar los próximos.</span></span>
+                </label>
+                <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg bg-white p-3 ring-1 ring-amber-100">
+                  <input type="radio" name="alcanceEconomico" value="RETROACTIVO" checked={formulario.alcanceEconomico === "RETROACTIVO"} onChange={() => setFormulario({ ...formulario, alcanceEconomico: "RETROACTIVO" })} className="mt-1" />
+                  <span><strong className="block text-slate-900">También recibos anteriores</strong><span className="mt-1 block text-sm text-red-700">Recalculará el historial de esta persona y puede crear o eliminar importes pendientes.</span></span>
+                </label>
+              </fieldset>
+            )}
             {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
             <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setFormulario(null)} className="rounded-lg border px-4 py-2 font-semibold text-slate-700">Cancelar</button><button type="button" disabled={guardando} onClick={guardar} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-60"><Save size={17} /> {guardando ? "Guardando..." : "Guardar estancia"}</button></div>
           </div>

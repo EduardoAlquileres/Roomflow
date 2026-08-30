@@ -8,7 +8,7 @@ type ResultadoSincronizacion = { actualizados: number };
  * Ajusta los cobros existentes a la estancia que corresponde a su mes.
  * Conserva los pagos ya anotados: solo recalcula alquiler, gastos, total y pendiente.
  */
-export async function sincronizarCobrosHistoricos(): Promise<ResultadoSincronizacion> {
+export async function sincronizarCobrosHistoricos(inquilinoId?: string): Promise<ResultadoSincronizacion> {
   const [{ data: cobrosData, error: errorCobros }, { data: estanciasData, error: errorEstancias }] = await Promise.all([
     supabase.from("cobros").select("*"),
     supabase.from("estancias").select("id, inquilino_id, habitacion_id, fecha_entrada, fecha_salida, precio, gastos, created_at"),
@@ -21,6 +21,7 @@ export async function sincronizarCobrosHistoricos(): Promise<ResultadoSincroniza
   let actualizados = 0;
 
   for (const cobro of cobros) {
+    if (inquilinoId && cobro.inquilino_id !== inquilinoId) continue;
     const estancia = estanciaParaPeriodo(estancias, cobro.inquilino_id, cobro.periodo_anio, cobro.periodo_mes);
     if (!estancia) continue;
 

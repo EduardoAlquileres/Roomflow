@@ -27,7 +27,6 @@ import RegistrarPagoModal from "@/components/RegistrarPagoModal";
 import HistorialCobrosModal from "@/components/HistorialCobrosModal";
 import { registrarPago } from "@/lib/movimientosCobro";
 import { generarCobrosPendientes } from "@/lib/generarCobrosPendientes";
-import { sincronizarCobrosHistoricos } from "@/lib/sincronizarCobrosHistoricos";
 
 import { Cobro } from "@/types/cobro";
 import CrearCobroModal, {
@@ -323,13 +322,6 @@ async function guardarPago(datos: {
     } catch (error) {
       console.error("No se pudieron generar los cobros mensuales", error);
       avisos.push("No se han podido generar los cobros automáticos.");
-    }
-    try {
-      const resultado = await sincronizarCobrosHistoricos();
-      if (resultado.actualizados) avisos.push(`Se han ajustado ${resultado.actualizados} cobro${resultado.actualizados === 1 ? "" : "s"} a su estancia histórica.`);
-    } catch (error) {
-      console.error("No se pudieron sincronizar los cobros históricos", error);
-      avisos.push("No se han podido ajustar los cobros históricos.");
     }
     setAvisoGeneracion(avisos.length ? avisos.join(" ") : null);
 
