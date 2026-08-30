@@ -82,10 +82,14 @@ type Vivienda = {
 type GastoVivienda = { vivienda_id: string; fecha: string; importe: number; estado: string };
 
 type EstanciaResumen = {
+  id: string;
   inquilino_id: string;
   habitacion_id: string;
   fecha_entrada: string;
   fecha_salida: string | null;
+  precio: number;
+  gastos: number;
+  created_at: string;
 };
 
 type FiltroEstadoCobro = "ABIERTOS" | "" | Cobro["estado"];
@@ -364,7 +368,7 @@ async function guardarPago(datos: {
 
     const { data: estanciasData } = await supabase
       .from("estancias")
-      .select("inquilino_id, habitacion_id, fecha_entrada, fecha_salida");
+      .select("id, inquilino_id, habitacion_id, fecha_entrada, fecha_salida, precio, gastos, created_at");
 
     setHabitaciones((habitacionesData ?? []) as Habitacion[]);
     setViviendas((viviendasData ?? []) as Vivienda[]);
@@ -627,6 +631,7 @@ async function guardarPago(datos: {
     habitaciones={habitaciones}
     viviendas={viviendas}
     inquilinos={inquilinos}
+    estancias={estancias}
     guardando={guardandoNuevoCobro}
     onCerrar={() => setModalNuevoCobroAbierto(false)}
     onGuardar={guardarNuevoCobro}

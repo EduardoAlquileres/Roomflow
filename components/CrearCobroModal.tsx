@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
+import { EstanciaEconomica, estanciaParaPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
 export type HabitacionParaCobro = {
   id: string; codigo: string; vivienda_id: string; precio: number; gastos: number; estado: "LIBRE" | "OCUPADA" | "RESERVADA";
@@ -15,26 +16,55 @@ export type DatosNuevoCobro = {
 
 const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, guardando = false, onCerrar, onGuardar }: {
-  habitaciones: HabitacionParaCobro[]; viviendas: ViviendaParaCobro[]; inquilinos: InquilinoParaCobro[]; guardando?: boolean;
+export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, estancias, guardando = false, onCerrar, onGuardar }: {
+  habitaciones: HabitacionParaCobro[]; viviendas: ViviendaParaCobro[]; inquilinos: InquilinoParaCobro[]; estancias: EstanciaEconomica[]; guardando?: boolean;
   onCerrar: () => void; onGuardar: (datos: DatosNuevoCobro) => Promise<void>;
 }) {
   const disponibles = useMemo(() => habitaciones.filter((habitacion) => inquilinos.some((inquilino) => inquilino.activo && inquilino.habitacion_id === habitacion.id)), [habitaciones, inquilinos]);
   const inicial = disponibles[0];
   const hoy = new Date();
+  const importesReales = (habitacionId: string, periodoMes: number, periodoAnio: number) => {
+    const titular = inquilinos.find((item) => item.activo && item.habitacion_id === habitacionId);
+    const estancia = titular ? estanciaParaPeriodo(estancias, titular.id, periodoAnio, periodoMes) : null;
+    if (!estancia) {
+      const habitacion = habitaciones.find((item) => item.id === habitacionId);
+      return { alquiler: Number(habitacion?.precio ?? 0), gastos: Number(habitacion?.gastos ?? 0) };
+    }
+    const personas = Math.max(1, personasEnHabitacionPeriodo(estancias, habitacionId, periodoAnio, periodoMes, estancia.fecha_entrada));
+    return importesCobroPeriodo(estancia, personas, periodoAnio, periodoMes);
+  };
+  const importesIniciales = inicial ? importesReales(inicial.id, hoy.getMonth() + 1, hoy.getFullYear()) : null;
   const [habitacionId, setHabitacionId] = useState(inicial?.id ?? "");
   const [mes, setMes] = useState(hoy.getMonth() + 1);
   const [anio, setAnio] = useState(hoy.getFullYear());
-  const [alquiler, setAlquiler] = useState(String(inicial?.precio ?? ""));
-  const [gastos, setGastos] = useState(String(inicial?.gastos ?? ""));
+  const [alquiler, setAlquiler] = useState(String(importesIniciales?.alquiler ?? ""));
+  const [gastos, setGastos] = useState(String(importesIniciales?.gastos ?? ""));
   const [vencimiento, setVencimiento] = useState(`${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-01`);
   const [observaciones, setObservaciones] = useState("");
   const [error, setError] = useState("");
   const inquilino = inquilinos.find((item) => item.activo && item.habitacion_id === habitacionId);
 
+  function actualizarImportes(id: string, periodoMes: number, periodoAnio: number) {
+    const importes = importesReales(id, periodoMes, periodoAnio);
+    setAlquiler(String(importes.alquiler));
+    setGastos(String(importes.gastos));
+  }
+
   function seleccionarHabitacion(id: string) {
-    const habitacion = disponibles.find((item) => item.id === id);
-    setHabitacionId(id); setAlquiler(String(habitacion?.precio ?? "")); setGastos(String(habitacion?.gastos ?? ""));
+    setHabitacionId(id);
+    actualizarImportes(id, mes, anio);
+  }
+
+  function seleccionarMes(nuevoMes: number) {
+    setMes(nuevoMes);
+    setVencimiento(`${anio}-${String(nuevoMes).padStart(2, "0")}-01`);
+    actualizarImportes(habitacionId, nuevoMes, anio);
+  }
+
+  function seleccionarAnio(nuevoAnio: number) {
+    setAnio(nuevoAnio);
+    setVencimiento(`${nuevoAnio}-${String(mes).padStart(2, "0")}-01`);
+    actualizarImportes(habitacionId, mes, nuevoAnio);
   }
 
   async function guardar() {
@@ -52,7 +82,7 @@ export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, g
       <div className="space-y-4 p-5">
         {disponibles.length === 0 ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">No hay habitaciones ocupadas con un inquilino activo.</p> : <>
           <label className="block text-sm font-medium">Habitación<select value={habitacionId} onChange={(event) => seleccionarHabitacion(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5">{disponibles.map((item) => { const vivienda = viviendas.find((value) => value.id === item.vivienda_id); const ocupante = inquilinos.find((value) => value.activo && value.habitacion_id === item.id); return <option key={item.id} value={item.id}>{vivienda?.nombre ?? "Sin vivienda"} · {item.codigo} — {ocupante?.nombre} {ocupante?.apellidos}</option>; })}</select></label>
-          <div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium">Mes<select value={mes} onChange={(event) => setMes(Number(event.target.value))} className="mt-1 w-full rounded-lg border p-2.5">{MESES.map((nombre, indice) => <option key={nombre} value={indice + 1}>{nombre}</option>)}</select></label><label className="block text-sm font-medium">Año<input type="number" min="2020" value={anio} onChange={(event) => setAnio(Number(event.target.value))} className="mt-1 w-full rounded-lg border p-2.5" /></label></div>
+          <div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium">Mes<select value={mes} onChange={(event) => seleccionarMes(Number(event.target.value))} className="mt-1 w-full rounded-lg border p-2.5">{MESES.map((nombre, indice) => <option key={nombre} value={indice + 1}>{nombre}</option>)}</select></label><label className="block text-sm font-medium">Año<input type="number" min="2020" value={anio} onChange={(event) => seleccionarAnio(Number(event.target.value))} className="mt-1 w-full rounded-lg border p-2.5" /></label></div>
           <div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium">Alquiler (€)<input inputMode="decimal" value={alquiler} onChange={(event) => setAlquiler(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label><label className="block text-sm font-medium">Gastos (€)<input inputMode="decimal" value={gastos} onChange={(event) => setGastos(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label></div>
           <label className="block text-sm font-medium">Fecha de vencimiento<input type="date" value={vencimiento} onChange={(event) => setVencimiento(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label><label className="block text-sm font-medium">Observaciones<textarea rows={3} value={observaciones} onChange={(event) => setObservaciones(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label>
         </>}
