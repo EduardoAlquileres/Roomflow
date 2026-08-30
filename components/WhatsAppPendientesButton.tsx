@@ -92,7 +92,7 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
         (cobro) => `• Recibo de ${meses[cobro.periodo_mes - 1]} de ${cobro.periodo_anio}: ${moneda.format(Number(cobro.pendiente))}`
       );
       const detalle = [
-        "🤖 Mensaje automático generado por RoomFlow.",
+        "🤖 Mensaje automático generado por la aplicación.",
         "",
         "Te informamos de los importes que figuran pendientes en RoomFlow:",
         "",
