@@ -30,8 +30,13 @@ export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, e
       const habitacion = habitaciones.find((item) => item.id === habitacionId);
       return { alquiler: Number(habitacion?.precio ?? 0), gastos: Number(habitacion?.gastos ?? 0) };
     }
-    const personas = Math.max(1, personasEnHabitacionPeriodo(estancias, habitacionId, periodoAnio, periodoMes, estancia.fecha_entrada));
-    return importesCobroPeriodo(estancia, personas, periodoAnio, periodoMes);
+    const hoyPeriodo = new Date();
+    const claveSeleccionada = periodoAnio * 100 + periodoMes;
+    const claveActual = hoyPeriodo.getFullYear() * 100 + hoyPeriodo.getMonth() + 1;
+    const personasHistoricas = personasEnHabitacionPeriodo(estancias, habitacionId, periodoAnio, periodoMes, estancia.fecha_entrada);
+    const personasActivas = inquilinos.filter((item) => item.activo && item.habitacion_id === habitacionId).length;
+    const personas = Math.max(1, claveSeleccionada >= claveActual ? personasActivas : personasHistoricas);
+    return { ...importesCobroPeriodo(estancia, personas, periodoAnio, periodoMes), personas, gastosPorPersona: Number(estancia.gastos) };
   };
   const importesIniciales = inicial ? importesReales(inicial.id, hoy.getMonth() + 1, hoy.getFullYear()) : null;
   const [habitacionId, setHabitacionId] = useState(inicial?.id ?? "");
@@ -43,6 +48,7 @@ export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, e
   const [observaciones, setObservaciones] = useState("");
   const [error, setError] = useState("");
   const inquilino = inquilinos.find((item) => item.activo && item.habitacion_id === habitacionId);
+  const detalleGastos = importesReales(habitacionId, mes, anio);
 
   function actualizarImportes(id: string, periodoMes: number, periodoAnio: number) {
     const importes = importesReales(id, periodoMes, periodoAnio);
@@ -83,7 +89,7 @@ export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, e
         {disponibles.length === 0 ? <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">No hay habitaciones ocupadas con un inquilino activo.</p> : <>
           <label className="block text-sm font-medium">Habitación<select value={habitacionId} onChange={(event) => seleccionarHabitacion(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5">{disponibles.map((item) => { const vivienda = viviendas.find((value) => value.id === item.vivienda_id); const ocupante = inquilinos.find((value) => value.activo && value.habitacion_id === item.id); return <option key={item.id} value={item.id}>{vivienda?.nombre ?? "Sin vivienda"} · {item.codigo} — {ocupante?.nombre} {ocupante?.apellidos}</option>; })}</select></label>
           <div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium">Mes<select value={mes} onChange={(event) => seleccionarMes(Number(event.target.value))} className="mt-1 w-full rounded-lg border p-2.5">{MESES.map((nombre, indice) => <option key={nombre} value={indice + 1}>{nombre}</option>)}</select></label><label className="block text-sm font-medium">Año<input type="number" min="2020" value={anio} onChange={(event) => seleccionarAnio(Number(event.target.value))} className="mt-1 w-full rounded-lg border p-2.5" /></label></div>
-          <div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium">Alquiler (€)<input inputMode="decimal" value={alquiler} onChange={(event) => setAlquiler(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label><label className="block text-sm font-medium">Gastos (€)<input inputMode="decimal" value={gastos} onChange={(event) => setGastos(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label></div>
+          <div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium">Alquiler (€)<input inputMode="decimal" value={alquiler} onChange={(event) => setAlquiler(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label><label className="block text-sm font-medium">Gastos totales (€)<input inputMode="decimal" value={gastos} onChange={(event) => setGastos(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" />{"personas" in detalleGastos && detalleGastos.personas > 1 && <span className="mt-1 block text-xs font-normal text-slate-500">{detalleGastos.personas} personas × {detalleGastos.gastosPorPersona.toLocaleString("es-ES", { minimumFractionDigits: 2 })} € por persona</span>}</label></div>
           <label className="block text-sm font-medium">Fecha de vencimiento<input type="date" value={vencimiento} onChange={(event) => setVencimiento(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label><label className="block text-sm font-medium">Observaciones<textarea rows={3} value={observaciones} onChange={(event) => setObservaciones(event.target.value)} className="mt-1 w-full rounded-lg border p-2.5" /></label>
         </>}
         {error && <p className="text-sm text-red-700">{error}</p>}
