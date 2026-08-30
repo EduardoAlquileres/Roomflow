@@ -114,20 +114,8 @@ export default function CobrosPage() {
   const [vistaActiva, setVistaActiva] = useState<"RESUMEN" | "COBROS" | "GASTOS">("RESUMEN");
   const [avisoGeneracion, setAvisoGeneracion] = useState<string | null>(null);
 
-  const [resumen, setResumen] = useState<Resumen>({
-    previstas: 0,
-    cobradas: 0,
-    pendientes: 0,
-    deudas: 0,
-    habitacionesPendientes: 0,
-  });
-  const [resumenAnual, setResumenAnual] = useState<Resumen>({
-    previstas: 0,
-    cobradas: 0,
-    pendientes: 0,
-    deudas: 0,
-    habitacionesPendientes: 0,
-  });
+  const ahora = new Date();
+  const [periodoResumen, setPeriodoResumen] = useState(`${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}`);
 async function eliminarCobroSeleccionado(id: string) {
   const confirmar = window.confirm(
     "¿Deseas eliminar este cobro?"
@@ -190,24 +178,25 @@ const [cobroHistorial, setCobroHistorial] =
 
     return true;
   });
-  const fechaActual = new Date();
-  const anioActual = fechaActual.getFullYear();
+  const periodosConCobros = useMemo(() => [...new Set(cobros.map((cobro) => `${cobro.periodo_anio}-${String(cobro.periodo_mes).padStart(2, "0")}`))].sort().reverse(), [cobros]);
+  const periodoSeleccionado = periodosConCobros.includes(periodoResumen) ? periodoResumen : periodosConCobros[0] ?? periodoResumen;
+  const [anioSeleccionado, mesSeleccionado] = periodoSeleccionado.split("-").map(Number);
+  const cobrosDelMes = cobros.filter((cobro) => cobro.periodo_anio === anioSeleccionado && cobro.periodo_mes === mesSeleccionado);
+  const resumen = calcularResumen(cobrosDelMes);
+  const anioActual = anioSeleccionado;
   const cobrosDelAnio = cobros.filter(
     (cobro) => cobro.periodo_anio === anioActual
   );
+  const resumenAnual = calcularResumen(cobrosDelAnio);
   const resumenViviendasMes = useMemo(() => {
-    const mesActual = fechaActual.getMonth() + 1;
-
     return viviendas.map((vivienda) => {
       const habitacionesVivienda = new Set(
         habitaciones
           .filter((habitacion) => habitacion.vivienda_id === vivienda.id)
           .map((habitacion) => habitacion.id)
       );
-      const cobrosVivienda = cobros.filter(
+      const cobrosVivienda = cobrosDelMes.filter(
         (cobro) =>
-          cobro.periodo_mes === mesActual &&
-          cobro.periodo_anio === anioActual &&
           habitacionesVivienda.has(cobro.habitacion_id)
       );
 
@@ -217,8 +206,9 @@ const [cobroHistorial, setCobroHistorial] =
         ...calcularResumen(cobrosVivienda),
       };
     });
-  }, [anioActual, cobros, fechaActual, habitaciones, viviendas]);
-  const mediaMensualCobrada = resumenAnual.cobradas / (fechaActual.getMonth() + 1);
+  }, [cobrosDelMes, habitaciones, viviendas]);
+  const mesesConCobrosEnAnio = new Set(cobrosDelAnio.map((cobro) => cobro.periodo_mes)).size;
+  const mediaMensualCobrada = resumenAnual.cobradas / Math.max(1, mesesConCobrosEnAnio);
   const cobradoPorMes = cobrosDelAnio.reduce<Record<number, number>>(
     (acumulado, cobro) => ({
       ...acumulado,
@@ -333,19 +323,6 @@ async function guardarPago(datos: {
 
     setCobros(listaCobros);
 
-    const fechaActual = new Date();
-    const mesActual = fechaActual.getMonth() + 1;
-    const anioActual = fechaActual.getFullYear();
-    const cobrosMes = listaCobros.filter(
-      (cobro) => cobro.periodo_mes === mesActual && cobro.periodo_anio === anioActual
-    );
-    const cobrosAnuales = listaCobros.filter(
-      (cobro) => cobro.periodo_anio === anioActual
-    );
-
-    setResumen(calcularResumen(cobrosMes));
-    setResumenAnual(calcularResumen(cobrosAnuales));
-
     const { data: habitacionesData } = await supabase
       .from("habitaciones")
       .select("*")
@@ -418,9 +395,19 @@ async function guardarPago(datos: {
     {avisoGeneracion && <div className="mb-5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900">{avisoGeneracion}</div>}
     {vistaActiva === "RESUMEN" && (
     <>
-    <div style={{ marginBottom: 16 }}>
-      <h2 style={{ margin: 0, fontSize: 20 }}>Mes en curso · {new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date())}</h2>
-      <p style={{ margin: "6px 0 0", color: "#64748b" }}>Situación de los cobros emitidos este mes.</p>
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 style={{ margin: 0, fontSize: 20 }}>Resumen mensual · {new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(anioSeleccionado, mesSeleccionado - 1, 1)))}</h2>
+        <p style={{ margin: "6px 0 0", color: "#64748b" }}>Situación de los cobros emitidos en el periodo seleccionado.</p>
+      </div>
+      <label className="text-sm font-semibold text-slate-700">Mes con cobros
+        <select value={periodoSeleccionado} onChange={(event) => setPeriodoResumen(event.target.value)} className="mt-1 block min-w-52 rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal text-slate-900">
+          {periodosConCobros.map((periodo) => {
+            const [anio, mes] = periodo.split("-").map(Number);
+            return <option key={periodo} value={periodo}>{new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(anio, mes - 1, 1)))}</option>;
+          })}
+        </select>
+      </label>
     </div>
     <div
       style={{
@@ -464,7 +451,7 @@ async function guardarPago(datos: {
     <PanelCobrosPorVivienda viviendas={resumenViviendasMes} />
 
     <div style={{ margin: "38px 0 16px" }}>
-      <h2 style={{ margin: 0, fontSize: 20 }}>Cobro real del año · {anioActual}</h2>
+      <h2 style={{ margin: 0, fontSize: 20 }}>Cobro real del año · {anioSeleccionado}</h2>
       <p style={{ margin: "6px 0 0", color: "#64748b" }}>Solo dinero ya cobrado, sin previsiones ni importes pendientes.</p>
     </div>
 
@@ -501,7 +488,7 @@ async function guardarPago(datos: {
 />
     </div>
 
-    <PanelAnaliticaOcupacion estancias={estancias} habitaciones={habitaciones} viviendas={viviendas} anio={anioActual} />
+    <PanelAnaliticaOcupacion estancias={estancias} habitaciones={habitaciones} viviendas={viviendas} anio={anioSeleccionado} />
 
     </>
     )}
