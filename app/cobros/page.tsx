@@ -95,6 +95,8 @@ type Inquilino = {
   id: string;
   nombre: string;
   apellidos: string;
+  telefono: string | null;
+  documento: string | null;
   activo: boolean;
   habitacion_id: string;
 };

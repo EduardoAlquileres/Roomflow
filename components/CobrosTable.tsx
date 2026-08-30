@@ -3,10 +3,11 @@
 import { Euro, History, Landmark, Pencil, Trash2 } from "lucide-react";
 import { Cobro } from "@/types/cobro";
 import ReciboCobroButton from "@/components/ReciboCobroButton";
+import WhatsAppPendientesButton from "@/components/WhatsAppPendientesButton";
 
 type Habitacion = { id: string; codigo: string; vivienda_id: string };
 type Vivienda = { id: string; nombre: string };
-type Inquilino = { id: string; nombre: string; apellidos: string };
+type Inquilino = { id: string; nombre: string; apellidos: string; telefono: string | null; documento?: string | null };
 
 type Props = {
   cobros: Cobro[];
@@ -29,7 +30,6 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
     return habitacion ? viviendas.find((vivienda) => vivienda.id === habitacion.vivienda_id) ?? null : null;
   };
   const obtenerInquilino = (id: string) => inquilinos.find((inquilino) => inquilino.id === id) ?? null;
-  const colorEstado = (estado: Cobro["estado"]) => estado === "PAGADO" ? "#22c55e" : estado === "PARCIAL" ? "#f59e0b" : estado === "DEUDA" ? "#7c3aed" : "#ef4444";
   const nombreEstado = (estado: Cobro["estado"]) => estado === "PAGADO" ? "Pagado" : estado === "PARCIAL" ? "Parcial" : estado === "DEUDA" ? "Deuda" : "Pendiente";
   const nombreMes = (mes: number) => ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"][mes - 1];
 
@@ -39,6 +39,13 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
         <button style={boton} title="Registrar pago" aria-label="Registrar pago" onClick={() => onRegistrarPago?.(cobro)}><Euro size={18} /></button>
         <button style={boton} title="Historial" aria-label="Ver historial" onClick={() => onVerHistorial?.(cobro)}><History size={18} /></button>
         <ReciboCobroButton cobro={cobro} vivienda={vivienda} habitacion={habitacion} inquilino={inquilino} />
+        {inquilino && cobro.estado !== "PAGADO" && (
+          <WhatsAppPendientesButton
+            inquilinoId={inquilino.id}
+            nombre={`${inquilino.nombre} ${inquilino.apellidos}`.trim()}
+            telefono={inquilino.telefono}
+          />
+        )}
         <button style={boton} title="Editar cobro" aria-label="Editar cobro" onClick={() => onEditar?.(cobro)}><Pencil size={18} /></button>
         {cobro.estado !== "PAGADO" && cobro.estado !== "DEUDA" && <button style={boton} title="Marcar saldo como deuda" aria-label="Marcar saldo como deuda" onClick={() => onMarcarDeuda?.(cobro)}><Landmark size={18} /></button>}
         <button style={boton} title="Eliminar cobro" aria-label="Eliminar cobro" onClick={() => onEliminar?.(cobro.id)}><Trash2 size={18} /></button>
