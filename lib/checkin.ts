@@ -15,7 +15,7 @@ import {
 import { crearEstancia } from "./estancias";
 import { registrarFianza } from "./fianzas";
 import { generarCobrosPendientes } from "./generarCobrosPendientes";
-import { factorProrrateoEntrada } from "./estanciasCobros";
+import { factorProrrateoEntrada, fechaVencimientoPeriodo } from "./estanciasCobros";
 
 import {
   Inquilino,
@@ -148,7 +148,7 @@ export async function realizarCheckIn(
     pagado: 0,
     pendiente: alquilerPrimerMes + gastosPrimerMes,
     estado: "PENDIENTE",
-    fecha_vencimiento: datos.fechaEntrada,
+    fecha_vencimiento: fechaVencimientoPeriodo(hoy.getFullYear(), hoy.getMonth() + 1),
     observaciones: null,
   });
 

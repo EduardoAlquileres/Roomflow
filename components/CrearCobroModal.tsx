@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
-import { EstanciaEconomica, estanciaParaPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo, fechaVencimientoPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
 export type HabitacionParaCobro = {
   id: string; codigo: string; vivienda_id: string; precio: number; gastos: number; estado: "LIBRE" | "OCUPADA" | "RESERVADA";
@@ -44,7 +44,7 @@ export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, e
   const [anio, setAnio] = useState(hoy.getFullYear());
   const [alquiler, setAlquiler] = useState(String(importesIniciales?.alquiler ?? ""));
   const [gastos, setGastos] = useState(String(importesIniciales?.gastos ?? ""));
-  const [vencimiento, setVencimiento] = useState(`${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-01`);
+  const [vencimiento, setVencimiento] = useState(fechaVencimientoPeriodo(hoy.getFullYear(), hoy.getMonth() + 1));
   const [observaciones, setObservaciones] = useState("");
   const [error, setError] = useState("");
   const inquilino = inquilinos.find((item) => item.activo && item.habitacion_id === habitacionId);
@@ -63,13 +63,13 @@ export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, e
 
   function seleccionarMes(nuevoMes: number) {
     setMes(nuevoMes);
-    setVencimiento(`${anio}-${String(nuevoMes).padStart(2, "0")}-01`);
+    setVencimiento(fechaVencimientoPeriodo(anio, nuevoMes));
     actualizarImportes(habitacionId, nuevoMes, anio);
   }
 
   function seleccionarAnio(nuevoAnio: number) {
     setAnio(nuevoAnio);
-    setVencimiento(`${nuevoAnio}-${String(mes).padStart(2, "0")}-01`);
+    setVencimiento(fechaVencimientoPeriodo(nuevoAnio, mes));
     actualizarImportes(habitacionId, mes, nuevoAnio);
   }
 

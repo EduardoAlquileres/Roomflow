@@ -9,6 +9,10 @@ export function inicioPeriodo(anio: number, mes: number) {
   return `${anio}-${String(mes).padStart(2, "0")}-01`;
 }
 
+export function fechaVencimientoPeriodo(anio: number, mes: number) {
+  return `${anio}-${String(mes).padStart(2, "0")}-05`;
+}
+
 export function finPeriodo(anio: number, mes: number) {
   return new Date(Date.UTC(anio, mes, 0)).toISOString().slice(0, 10);
 }

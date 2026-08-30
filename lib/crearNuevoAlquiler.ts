@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { NuevoAlquiler } from "@/types/nuevoAlquiler";
 import { generarCobrosPendientes } from "@/lib/generarCobrosPendientes";
-import { factorProrrateoEntrada } from "@/lib/estanciasCobros";
+import { factorProrrateoEntrada, fechaVencimientoPeriodo } from "@/lib/estanciasCobros";
 
 type InquilinoGuardado = { id: string };
 
@@ -235,7 +235,7 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
         pagado: 0,
         pendiente: total,
         estado: "PENDIENTE",
-        fecha_vencimiento: datos.fechaEntrada,
+        fecha_vencimiento: fechaVencimientoPeriodo(fecha.getFullYear(), fecha.getMonth() + 1),
         observaciones: datos.observaciones.trim() || null,
       })
       .select("id")

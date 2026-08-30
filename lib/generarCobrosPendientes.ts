@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Cobro } from "@/types/cobro";
-import { EstanciaEconomica, estanciaParaPeriodo, importesCobroPeriodo, inicioPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo, fechaVencimientoPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
 type InquilinoActivo = { id: string; habitacion_id: string; fecha_entrada: string; created_at: string };
 type HabitacionEconomica = { id: string; precio: number; gastos: number };
@@ -24,12 +24,6 @@ function clavePeriodo(estancia: EstanciaEconomica, anio: number, mes: number) {
   // Dos titulares que entran juntos comparten cobro, pero un cambio de
   // inquilino dentro del mismo mes debe generar una mensualidad diferente.
   return `${estancia.habitacion_id}-${anio}-${mes}-${estancia.fecha_entrada}`;
-}
-
-function fechaVencimiento(periodo: Date, entrada: string) {
-  const entradaMes = primerDiaMes(entrada);
-  if (entradaMes.getTime() === periodo.getTime()) return entrada;
-  return inicioPeriodo(periodo.getUTCFullYear(), periodo.getUTCMonth() + 1);
 }
 
 /** Crea solo los cobros que faltan usando el precio y la habitación vigentes en cada mes. */
@@ -104,7 +98,7 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
 
       const personas = Math.max(1, personasEnHabitacionPeriodo(todasLasEstancias, estancia.habitacion_id, anio, mes, estancia.fecha_entrada));
       const { alquiler, gastos, total } = importesCobroPeriodo(estancia, personas, anio, mes);
-      nuevos.push({ habitacion_id: estancia.habitacion_id, inquilino_id: estancia.inquilino_id, periodo_mes: mes, periodo_anio: anio, alquiler, gastos, total, pagado: 0, pendiente: total, estado: "PENDIENTE", fecha_vencimiento: fechaVencimiento(periodo, estancia.fecha_entrada), observaciones: "Cobro mensual generado automáticamente según la estancia del periodo." });
+      nuevos.push({ habitacion_id: estancia.habitacion_id, inquilino_id: estancia.inquilino_id, periodo_mes: mes, periodo_anio: anio, alquiler, gastos, total, pagado: 0, pendiente: total, estado: "PENDIENTE", fecha_vencimiento: fechaVencimientoPeriodo(anio, mes), observaciones: "Cobro mensual generado automáticamente según la estancia del periodo." });
       existentes.add(clave);
       const etiqueta = `${anio}-${String(mes).padStart(2, "0")}`;
       if (!primerPeriodo || etiqueta < primerPeriodo) primerPeriodo = etiqueta;
