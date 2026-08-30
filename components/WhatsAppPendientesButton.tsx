@@ -94,7 +94,7 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
       const detalle = [
         "🤖 Mensaje automático generado por la aplicación.",
         "",
-        "Te informamos de los importes que figuran pendientes en RoomFlow:",
+        "Te informamos de los importes que figuran pendientes en la aplicación:",
         "",
         ...lineasCobros,
         ...(pendienteFianza > 0.005 ? [`• Fianza pendiente: ${moneda.format(pendienteFianza)}`] : []),
