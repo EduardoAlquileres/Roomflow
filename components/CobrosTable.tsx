@@ -42,6 +42,7 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
         {inquilino && cobro.estado !== "PAGADO" && (
           <WhatsAppPendientesButton
             inquilinoId={inquilino.id}
+            habitacionId={cobro.habitacion_id}
             nombre={`${inquilino.nombre} ${inquilino.apellidos}`.trim()}
             telefono={inquilino.telefono}
           />

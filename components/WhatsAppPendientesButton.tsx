@@ -6,7 +6,15 @@ import { supabase } from "@/lib/supabase";
 
 type Props = {
   inquilinoId: string;
+  habitacionId: string;
   nombre: string;
+  telefono: string | null;
+};
+
+type Destinatario = {
+  id: string;
+  nombre: string;
+  apellidos: string;
   telefono: string | null;
 };
 
@@ -31,25 +39,17 @@ function telefonoWhatsApp(telefono: string) {
   return numero;
 }
 
-export default function WhatsAppPendientesButton({ inquilinoId, nombre, telefono }: Props) {
+export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, nombre, telefono }: Props) {
   const [preparando, setPreparando] = useState(false);
+  const [destinatarios, setDestinatarios] = useState<Destinatario[]>([]);
+  const [detalleMensaje, setDetalleMensaje] = useState<string[]>([]);
 
-  async function abrirWhatsApp() {
+  async function prepararMensajes() {
     if (preparando) return;
-    if (!telefono?.trim()) {
-      alert(`No hay un teléfono registrado para ${nombre}.`);
-      return;
-    }
-
-    const numero = telefonoWhatsApp(telefono);
-    if (numero.length < 10) {
-      alert(`El teléfono registrado para ${nombre} no parece válido.`);
-      return;
-    }
 
     setPreparando(true);
     try {
-      const [respuestaCobros, respuestaFianzas] = await Promise.all([
+      const [respuestaCobros, respuestaFianzas, respuestaInquilinos] = await Promise.all([
         supabase
           .from("cobros")
           .select("periodo_anio, periodo_mes, pendiente")
@@ -63,9 +63,15 @@ export default function WhatsAppPendientesButton({ inquilinoId, nombre, telefono
           .select("importe, importe_entregado")
           .eq("inquilino_id", inquilinoId)
           .in("estado", ["COBRADA", "PENDIENTE_REVISION"]),
+        supabase
+          .from("inquilinos")
+          .select("id, nombre, apellidos, telefono")
+          .eq("habitacion_id", habitacionId)
+          .eq("activo", true)
+          .order("created_at"),
       ]);
 
-      const error = respuestaCobros.error ?? respuestaFianzas.error;
+      const error = respuestaCobros.error ?? respuestaFianzas.error ?? respuestaInquilinos.error;
       if (error) throw error;
 
       const cobros = (respuestaCobros.data ?? []) as CobroPendiente[];
@@ -85,9 +91,7 @@ export default function WhatsAppPendientesButton({ inquilinoId, nombre, telefono
       const lineasCobros = cobros.map(
         (cobro) => `• Recibo de ${meses[cobro.periodo_mes - 1]} de ${cobro.periodo_anio}: ${moneda.format(Number(cobro.pendiente))}`
       );
-      const lineas = [
-        `Hola ${nombre},`,
-        "",
+      const detalle = [
         "Te informamos de los importes que figuran pendientes en RoomFlow:",
         "",
         ...lineasCobros,
@@ -97,8 +101,9 @@ export default function WhatsAppPendientesButton({ inquilinoId, nombre, telefono
         "",
         "Si ya has realizado algún pago, por favor envíanos el justificante para actualizarlo. Gracias.",
       ];
-
-      window.location.assign(`https://wa.me/${numero}?text=${encodeURIComponent(lineas.join("\n"))}`);
+      const titulares = (respuestaInquilinos.data ?? []) as Destinatario[];
+      setDestinatarios(titulares.length ? titulares : [{ id: inquilinoId, nombre, apellidos: "", telefono }]);
+      setDetalleMensaje(detalle);
     } catch (error) {
       alert(error instanceof Error ? error.message : "No se pudo preparar el mensaje de WhatsApp.");
     } finally {
@@ -106,10 +111,25 @@ export default function WhatsAppPendientesButton({ inquilinoId, nombre, telefono
     }
   }
 
+  function abrirDestinatario(destinatario: Destinatario) {
+    if (!destinatario.telefono?.trim()) {
+      alert(`No hay un teléfono registrado para ${destinatario.nombre} ${destinatario.apellidos}.`);
+      return;
+    }
+    const numero = telefonoWhatsApp(destinatario.telefono);
+    if (numero.length < 10) {
+      alert(`El teléfono registrado para ${destinatario.nombre} ${destinatario.apellidos} no parece válido.`);
+      return;
+    }
+    const mensaje = [`Hola ${destinatario.nombre},`, "", ...detalleMensaje].join("\n");
+    window.location.assign(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`);
+  }
+
   return (
+    <>
     <button
       type="button"
-      onClick={abrirWhatsApp}
+      onClick={prepararMensajes}
       disabled={preparando}
       title="Enviar pendientes por WhatsApp"
       aria-label="Preparar mensaje de WhatsApp con importes pendientes"
@@ -129,5 +149,36 @@ export default function WhatsAppPendientesButton({ inquilinoId, nombre, telefono
     >
       <MessageCircle size={18} />
     </button>
+    {destinatarios.length > 0 && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+        <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Enviar aviso por WhatsApp</h2>
+              <p className="mt-1 text-sm text-slate-500">Abre el mensaje de cada titular y confirma el envío en WhatsApp.</p>
+            </div>
+            <button type="button" onClick={() => setDestinatarios([])} className="text-sm font-semibold text-slate-600">Cerrar</button>
+          </div>
+          <div className="mt-5 divide-y divide-slate-100 rounded-xl border border-slate-200">
+            {destinatarios.map((destinatario) => (
+              <div key={destinatario.id} className="flex items-center justify-between gap-4 p-4">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-slate-900">{destinatario.nombre} {destinatario.apellidos}</p>
+                  <p className="mt-1 text-sm text-slate-500">{destinatario.telefono || "Sin teléfono registrado"}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => abrirDestinatario(destinatario)}
+                  className="shrink-0 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                >
+                  Abrir WhatsApp
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
