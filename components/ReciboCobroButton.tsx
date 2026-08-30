@@ -9,12 +9,12 @@ type Props = {
   cobro: Cobro;
   vivienda: { id: string; nombre: string; direccion?: string | null } | null;
   habitacion: { codigo: string } | null;
-  inquilino: { nombre: string; apellidos: string } | null;
+  inquilino: { nombre: string; apellidos: string; documento?: string | null } | null;
 };
 
 type HabitacionDocumento = { id: string; codigo: string; vivienda_id: string };
 type ViviendaDocumento = { id: string; nombre: string; direccion: string | null };
-type Persona = { id: string; nombre: string; apellidos: string };
+type Persona = { id: string; nombre: string; apellidos: string; documento: string };
 type FianzaDocumento = { id: string; importe: number; importe_entregado: number };
 type CuotaFianzaDocumento = { fecha_prevista: string; importe: number; importe_pagado: number };
 
@@ -52,7 +52,7 @@ export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquili
         .filter((item): item is EstanciaEconomica => Boolean(item) && item.habitacion_id === estancia.habitacion_id)
         .map((item) => item.inquilino_id))];
       const { data: personasData, error: errorPersonas } = idsTitulares.length
-        ? await supabase.from("inquilinos").select("id, nombre, apellidos").in("id", idsTitulares)
+        ? await supabase.from("inquilinos").select("id, nombre, apellidos, documento").in("id", idsTitulares)
         : { data: [], error: null };
       if (errorPersonas) { alert(errorPersonas.message); return; }
       titulares = (personasData ?? []) as Persona[];
@@ -72,8 +72,8 @@ export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquili
 
     const listaPropietarios = (propietarios ?? []).map((propietario) => `${propietario.nombre_completo} (${propietario.documento})`).join(" · ") || "Propietario pendiente de asignar";
     const listaInquilinos = titulares.length
-      ? titulares.map((titular) => `${titular.nombre} ${titular.apellidos}`).join(" · ")
-      : inquilino ? `${inquilino.nombre} ${inquilino.apellidos}` : "Inquilino no disponible";
+      ? titulares.map((titular) => `${titular.nombre} ${titular.apellidos} (${titular.documento || "Sin documento"})`).join(" · ")
+      : inquilino ? `${inquilino.nombre} ${inquilino.apellidos} (${inquilino.documento || "Sin documento"})` : "Inquilino no disponible";
 
     const habitacionFianzaId = estancia?.habitacion_id ?? cobro.habitacion_id;
     const { data: fianzasData, error: errorFianzas } = await supabase
