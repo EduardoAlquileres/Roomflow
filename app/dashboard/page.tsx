@@ -6,6 +6,7 @@ import { DoorOpen } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 import KpiCard from "@/components/KpiCard";
+import InformeSituacionButton from "@/components/InformeSituacionButton";
 
 type Vivienda = {
   id: string;
@@ -54,7 +55,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="rf-page-header"><div><h1 className="rf-page-title">Resumen general</h1><p className="rf-page-description">Una visión rápida del estado de tus viviendas y habitaciones.</p></div></div>
+      <div className="rf-page-header"><div><h1 className="rf-page-title">Resumen general</h1><p className="rf-page-description">Una visión rápida del estado de tus viviendas y habitaciones.</p></div><InformeSituacionButton /></div>
       <div className="rf-kpi-grid">
         <KpiCard titulo="Viviendas" valor={viviendas.length} />
         <KpiCard titulo="Habitaciones" valor={habitaciones.length} />
