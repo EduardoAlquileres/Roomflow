@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarClock, CheckCircle2, Pencil, Plus, X } from "lucide-react";
 import { CuotaFianza } from "@/types";
 import { supabase } from "@/lib/supabase";
+import ReciboCuotaFianzaButton from "@/components/ReciboCuotaFianzaButton";
 
 const moneda = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 const errorTexto = (error: unknown, defecto: string) => typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : error instanceof Error ? error.message : defecto;
@@ -258,6 +259,7 @@ export default function FianzaCuotasPanel({ fianzaId, estanciaId, importeTotal, 
             </div>
             <p className="mt-2 text-xs text-slate-500">Puedes corregir el importe pactado incluso si la cuota ya fue registrada.</p>
             {!pagada && <div className="mt-3 flex gap-2"><input inputMode="decimal" placeholder="Importe recibido" value={pagos[cuota.id] ?? ""} onChange={(event) => setPagos((actual) => ({ ...actual, [cuota.id]: event.target.value }))} className="min-w-0 flex-1 rounded-lg border p-2 text-sm" /><button disabled={guardando} onClick={() => registrarPago(cuota)} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Registrar</button></div>}
+            {Number(cuota.importe_pagado) > 0 && <div className="mt-3"><ReciboCuotaFianzaButton fianzaId={fianzaId} cuota={cuota} /></div>}
           </article>;
         })}</div>
         <div className="mt-5 flex flex-wrap justify-between gap-3 border-t pt-4"><button type="button" onClick={anadirCuota} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"><Plus size={16} /> Añadir cuota</button><div className="flex gap-3"><button onClick={() => setAbierto(false)} className="rounded-lg border px-4 py-2 text-sm font-medium">Cerrar</button><button disabled={guardando} onClick={guardarPlan} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Pencil size={16} /> Guardar plan</button></div></div>
