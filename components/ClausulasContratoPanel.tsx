@@ -8,6 +8,10 @@ import { supabase } from "@/lib/supabase";
 type Props = { iniciales: ClausulaContrato[] };
 type Formulario = { titulo: string; contenido: string; tipo_documento: TipoClausulaContrato; activa: boolean; orden: string };
 const vacio = (): Formulario => ({ titulo: "", contenido: "", tipo_documento: "CONTRATO", activa: true, orden: "" });
+const mensajeErrorClausulas = (error: { message: string }) =>
+  error.message.includes("row-level security")
+    ? "Falta activar la gestión de cláusulas en Supabase. Ejecuta una sola vez el archivo supabase/activar_clausulas_contrato.sql."
+    : error.message;
 
 export default function ClausulasContratoPanel({ iniciales }: Props) {
   const [clausulas, setClausulas] = useState(iniciales);
@@ -29,21 +33,21 @@ export default function ClausulasContratoPanel({ iniciales }: Props) {
     const consulta = editando ? supabase.from("clausulas_contrato").update(datos).eq("id", editando.id).select().single() : supabase.from("clausulas_contrato").insert(datos).select().single();
     const { data, error: errorGuardado } = await consulta;
     setGuardando(false);
-    if (errorGuardado) { setError(errorGuardado.message); return; }
+    if (errorGuardado) { setError(mensajeErrorClausulas(errorGuardado)); return; }
     setClausulas((actuales) => editando ? actuales.map((clausula) => clausula.id === data.id ? data : clausula) : [...actuales, data].sort((a, b) => a.orden - b.orden));
     cerrar();
   }
 
   async function activar(clausula: ClausulaContrato) {
     const { error: errorActualizacion } = await supabase.from("clausulas_contrato").update({ activa: !clausula.activa }).eq("id", clausula.id);
-    if (errorActualizacion) { alert(errorActualizacion.message); return; }
+    if (errorActualizacion) { alert(mensajeErrorClausulas(errorActualizacion)); return; }
     setClausulas((actuales) => actuales.map((actual) => actual.id === clausula.id ? { ...actual, activa: !actual.activa } : actual));
   }
 
   async function eliminar(clausula: ClausulaContrato) {
     if (!confirm(`Eliminar la cláusula “${clausula.titulo}”?`)) return;
     const { error: errorEliminacion } = await supabase.from("clausulas_contrato").delete().eq("id", clausula.id);
-    if (errorEliminacion) { alert(errorEliminacion.message); return; }
+    if (errorEliminacion) { alert(mensajeErrorClausulas(errorEliminacion)); return; }
     setClausulas((actuales) => actuales.filter((actual) => actual.id !== clausula.id));
   }
 

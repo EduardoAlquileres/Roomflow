@@ -12,3 +12,4 @@ create table if not exists public.clausulas_contrato (
 );
 
 alter table public.clausulas_contrato disable row level security;
+grant select, insert, update, delete on table public.clausulas_contrato to anon, authenticated;
