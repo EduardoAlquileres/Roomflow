@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
-import { EstanciaEconomica, estanciaParaPeriodo, fechaVencimientoPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo, estanciaConGastosHabitacion, fechaVencimientoPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
 export type HabitacionParaCobro = {
   id: string; codigo: string; vivienda_id: string; precio: number; gastos: number; estado: "LIBRE" | "OCUPADA" | "RESERVADA";
@@ -28,7 +28,9 @@ export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, e
     const estancia = titular ? estanciaParaPeriodo(estancias, titular.id, periodoAnio, periodoMes) : null;
     if (!estancia) {
       const habitacion = habitaciones.find((item) => item.id === habitacionId);
-      return { alquiler: Number(habitacion?.precio ?? 0), gastos: Number(habitacion?.gastos ?? 0) };
+      const personas = Math.max(1, inquilinos.filter((item) => item.activo && item.habitacion_id === habitacionId).length);
+      const gastosPorPersona = Number(habitacion?.gastos ?? 0);
+      return { alquiler: Number(habitacion?.precio ?? 0), gastos: Number((gastosPorPersona * personas).toFixed(2)), personas, gastosPorPersona };
     }
     const hoyPeriodo = new Date();
     const claveSeleccionada = periodoAnio * 100 + periodoMes;
@@ -36,7 +38,8 @@ export default function CrearCobroModal({ habitaciones, viviendas, inquilinos, e
     const personasHistoricas = personasEnHabitacionPeriodo(estancias, habitacionId, periodoAnio, periodoMes, estancia.fecha_entrada);
     const personasActivas = inquilinos.filter((item) => item.activo && item.habitacion_id === habitacionId).length;
     const personas = Math.max(1, claveSeleccionada >= claveActual ? personasActivas : personasHistoricas);
-    return { ...importesCobroPeriodo(estancia, personas, periodoAnio, periodoMes), personas, gastosPorPersona: Number(estancia.gastos) };
+    const condiciones = estanciaConGastosHabitacion(estancia, habitaciones.find((item) => item.id === estancia.habitacion_id), periodoAnio, periodoMes);
+    return { ...importesCobroPeriodo(condiciones, personas, periodoAnio, periodoMes), personas, gastosPorPersona: Number(condiciones.gastos) };
   };
   const importesIniciales = inicial ? importesReales(inicial.id, hoy.getMonth() + 1, hoy.getFullYear()) : null;
   const [habitacionId, setHabitacionId] = useState(inicial?.id ?? "");

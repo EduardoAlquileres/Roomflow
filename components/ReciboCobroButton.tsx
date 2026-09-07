@@ -4,7 +4,7 @@ import { FileText } from "lucide-react";
 import { descargarReciboPdf } from "@/lib/reciboPdf";
 import { Cobro } from "@/types/cobro";
 import { supabase } from "@/lib/supabase";
-import { EstanciaEconomica, estanciaParaPeriodo, personasEnHabitacionPeriodo, factorProrrateoEntrada } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo } from "@/lib/estanciasCobros";
 
 type Props = {
   cobro: Cobro;
@@ -34,6 +34,7 @@ export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquili
     let viviendaRecibo = vivienda;
     let codigoHabitacion = habitacion?.codigo ?? "-";
     const alquiler = Number(cobro.alquiler);
+    const gastos = Number(cobro.gastos);
     let titulares: Persona[] = [];
 
     const habitacionId = estancia?.habitacion_id ?? cobro.habitacion_id;
@@ -42,14 +43,6 @@ export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquili
     if (errorHabitacion) { alert(errorHabitacion.message); return; }
     const habitacionRecibo = habitacionData as HabitacionDocumento;
     codigoHabitacion = habitacionRecibo.codigo;
-    const personas = Math.max(1, personasEnHabitacionPeriodo(estancias, habitacionId, cobro.periodo_anio, cobro.periodo_mes, estancia?.fecha_entrada));
-    const factor = estancia ? factorProrrateoEntrada(estancia, cobro.periodo_anio, cobro.periodo_mes) : 1;
-    const gastosPorPersona = Number(habitacionRecibo.gastos);
-    if (!Number.isFinite(gastosPorPersona) || habitacionRecibo.gastos == null || gastosPorPersona < 0) {
-      alert("Revisa los gastos por persona de la habitación antes de generar el recibo.");
-      return;
-    }
-    const gastos = Number((gastosPorPersona * personas * factor).toFixed(2));
 
     if (estancia) {
       const { data: viviendaData, error: errorVivienda } = await supabase

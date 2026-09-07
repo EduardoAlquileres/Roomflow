@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Cobro } from "@/types/cobro";
-import { EstanciaEconomica, estanciaParaPeriodo, fechaVencimientoPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo, estanciaConGastosHabitacion, fechaVencimientoPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
 type InquilinoActivo = { id: string; habitacion_id: string; fecha_entrada: string; created_at: string };
 type HabitacionEconomica = { id: string; precio: number; gastos: number };
@@ -48,7 +48,7 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
   if (errorInquilinos) throw errorInquilinos;
 
   const inquilinosSinEstancia = ((inquilinosData ?? []) as InquilinoActivo[]).filter((inquilino) => !inquilinosConEstancia.has(inquilino.id));
-  const habitacionesIds = [...new Set(inquilinosSinEstancia.map((inquilino) => inquilino.habitacion_id))];
+  const habitacionesIds = [...new Set([...estancias.map((estancia) => estancia.habitacion_id), ...inquilinosSinEstancia.map((inquilino) => inquilino.habitacion_id)])];
   const { data: habitacionesData, error: errorHabitaciones } = habitacionesIds.length
     ? await supabase.from("habitaciones").select("id, precio, gastos").in("id", habitacionesIds)
     : { data: [], error: null };
@@ -97,7 +97,8 @@ export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<
       if (existentes.has(clave)) continue;
 
       const personas = Math.max(1, personasEnHabitacionPeriodo(todasLasEstancias, estancia.habitacion_id, anio, mes, estancia.fecha_entrada));
-      const { alquiler, gastos, total } = importesCobroPeriodo(estancia, personas, anio, mes);
+      const condiciones = estanciaConGastosHabitacion(estancia, importesPorHabitacion.get(estancia.habitacion_id), anio, mes);
+      const { alquiler, gastos, total } = importesCobroPeriodo(condiciones, personas, anio, mes);
       nuevos.push({ habitacion_id: estancia.habitacion_id, inquilino_id: estancia.inquilino_id, periodo_mes: mes, periodo_anio: anio, alquiler, gastos, total, pagado: 0, pendiente: total, estado: "PENDIENTE", fecha_vencimiento: fechaVencimientoPeriodo(anio, mes), observaciones: "Cobro mensual generado automáticamente según la estancia del periodo." });
       existentes.add(clave);
       const etiqueta = `${anio}-${String(mes).padStart(2, "0")}`;

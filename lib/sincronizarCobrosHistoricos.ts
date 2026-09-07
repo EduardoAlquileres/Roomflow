@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Cobro } from "@/types/cobro";
-import { EstanciaEconomica, estanciaParaPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo, estanciaConGastosHabitacion, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
 type ResultadoSincronizacion = { actualizados: number };
 
@@ -9,12 +9,15 @@ type ResultadoSincronizacion = { actualizados: number };
  * Conserva los pagos ya anotados: solo recalcula alquiler, gastos, total y pendiente.
  */
 export async function sincronizarCobrosHistoricos(inquilinoId?: string): Promise<ResultadoSincronizacion> {
-  const [{ data: cobrosData, error: errorCobros }, { data: estanciasData, error: errorEstancias }] = await Promise.all([
+  const [{ data: cobrosData, error: errorCobros }, { data: estanciasData, error: errorEstancias }, { data: habitacionesData, error: errorHabitaciones }] = await Promise.all([
     supabase.from("cobros").select("*"),
     supabase.from("estancias").select("id, inquilino_id, habitacion_id, fecha_entrada, fecha_salida, precio, gastos, created_at"),
+    supabase.from("habitaciones").select("id,gastos"),
   ]);
   if (errorCobros) throw errorCobros;
   if (errorEstancias) throw errorEstancias;
+  if (errorHabitaciones) throw errorHabitaciones;
+  const habitaciones = new Map((habitacionesData ?? []).map((habitacion) => [habitacion.id, habitacion]));
 
   const cobros = (cobrosData ?? []) as Cobro[];
   const estancias = (estanciasData ?? []) as EstanciaEconomica[];
@@ -26,7 +29,8 @@ export async function sincronizarCobrosHistoricos(inquilinoId?: string): Promise
     if (!estancia) continue;
 
     const personas = Math.max(1, personasEnHabitacionPeriodo(estancias, estancia.habitacion_id, cobro.periodo_anio, cobro.periodo_mes, estancia.fecha_entrada));
-    const { alquiler, gastos, total } = importesCobroPeriodo(estancia, personas, cobro.periodo_anio, cobro.periodo_mes);
+    const condiciones = estanciaConGastosHabitacion(estancia, habitaciones.get(estancia.habitacion_id), cobro.periodo_anio, cobro.periodo_mes);
+    const { alquiler, gastos, total } = importesCobroPeriodo(condiciones, personas, cobro.periodo_anio, cobro.periodo_mes);
     const pagado = Number(cobro.pagado);
     const pendiente = Math.max(total - pagado, 0);
     const estado: Cobro["estado"] = pendiente === 0

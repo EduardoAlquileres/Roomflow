@@ -63,6 +63,24 @@ function redondearImporte(importe: number) {
   return Number(importe.toFixed(2));
 }
 
+/** La tarifa actual de la habitación se aplica al mes actual y a los futuros.
+ * Los periodos anteriores conservan las condiciones históricas de la estancia. */
+export function estanciaConGastosHabitacion(
+  estancia: EstanciaEconomica,
+  habitacion: { gastos: number } | undefined,
+  anio: number,
+  mes: number,
+  hoy = new Date(),
+): EstanciaEconomica {
+  const periodoActual = hoy.getFullYear() * 100 + hoy.getMonth() + 1;
+  if (!habitacion || anio * 100 + mes < periodoActual) return estancia;
+  const gastos = Number(habitacion.gastos);
+  if (habitacion.gastos == null || !Number.isFinite(gastos) || gastos < 0) {
+    throw new Error("Revisa los gastos por persona de la habitación.");
+  }
+  return { ...estancia, gastos };
+}
+
 /**
  * El primer mes se cobra únicamente por la parte del mes posterior a la entrada.
  * Ejemplo: entrada el día 15 de abril: 550 € pasan a ser 275 €.
