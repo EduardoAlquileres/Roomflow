@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText } from "lucide-react";
+import { descargarReciboPdf } from "@/lib/reciboPdf";
 import { supabase } from "@/lib/supabase";
 
 type Props = {
@@ -20,13 +21,6 @@ const escapar = (texto: string) => texto.replace(/[&<>'"]/g, (caracter) => ({ "&
 
 export default function ReciboCuotaFianzaButton({ fianzaId, cuota }: Props) {
   async function generar() {
-    const ventana = window.open("", "_blank");
-    if (!ventana) {
-      alert("Permite las ventanas emergentes para generar el recibo.");
-      return;
-    }
-    ventana.document.write("<title>Generando recibo</title><p style='font-family:Arial;padding:24px'>Generando recibo de fianza...</p>");
-
     try {
       const { data: fianza, error: errorFianza } = await supabase
         .from("fianzas")
@@ -102,12 +96,10 @@ export default function ReciboCuotaFianzaButton({ fianzaId, cuota }: Props) {
         ? pagosPendientes.map((cuotaPlan) => `<div class="fila"><span>Cuota nº ${cuotaPlan.numero} · prevista el ${escapar(formatoFecha.format(new Date(`${cuotaPlan.fecha_prevista}T12:00:00`)))}</span><strong>${moneda.format(cuotaPlan.pendiente)}</strong></div>`).join("")
         : '<div class="fila"><span>No quedan cuotas pendientes de la fianza</span><strong>0,00&nbsp;€</strong></div>';
       const direccion = [vivienda.direccion, vivienda.municipio].filter(Boolean).join(", ");
-      const documento = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recibo de fianza - ${escapar(vivienda.nombre)} ${escapar(habitacion.codigo)}</title><style>body{font-family:Arial,sans-serif;color:#172033;padding:42px;max-width:720px;margin:auto}.acciones{position:sticky;top:0;display:flex;justify-content:flex-end;gap:10px;margin:-24px -24px 24px;padding:12px 24px;background:rgba(255,255,255,.96);border-bottom:1px solid #e2e8f0}.acciones button{border:1px solid #cbd5e1;border-radius:9px;background:#fff;padding:10px 14px;font-size:14px;font-weight:700}.acciones .imprimir{border-color:#2563eb;background:#2563eb;color:#fff}.cabecera{display:flex;justify-content:space-between;gap:20px;border-bottom:3px solid #2563eb;padding-bottom:18px}.titulo{font-size:25px;font-weight:700}.meta{color:#5b677c;text-align:right}.bloque{margin-top:26px}.etiqueta{font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.05em}.valor{font-size:16px;margin-top:5px}.fila{display:flex;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid #e2e8f0}.total{font-size:20px;font-weight:700;border-top:2px solid #172033;padding-top:16px;margin-top:10px}.pendientes{margin-top:22px;border:1px solid #fed7aa;background:#fff7ed;border-radius:10px;padding:0 16px 4px}.pendientes .etiqueta{padding-top:15px;color:#9a3412}.nota{margin-top:25px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;padding:14px 16px;color:#1e3a8a}@media(max-width:600px){body{padding:18px}.acciones{margin:-8px -8px 20px;padding:10px 8px}.cabecera{display:block}.meta{text-align:left;margin-top:10px}.fila{align-items:flex-start}.fila strong{text-align:right}}@media print{body{padding:24px}.acciones{display:none}}</style></head><body><div class="acciones"><button type="button" onclick="history.back()">Volver</button><button type="button" class="imprimir" onclick="window.print()">Imprimir o guardar</button></div><div class="cabecera"><div><div class="titulo">RECIBO DE FIANZA</div><div class="meta" style="text-align:left">Justificante de entrega de depósito</div></div><div class="meta">Fecha de pago: ${escapar(formatoFecha.format(new Date(`${fechaPago}T12:00:00`)))}</div></div><div class="bloque"><div class="etiqueta">Propietario(s)</div><div class="valor">${escapar(propietariosTexto)}</div></div><div class="bloque"><div class="etiqueta">Inquilino(s) titular(es)</div><div class="valor">${escapar(titularesTexto)}</div></div><div class="bloque"><div class="etiqueta">Vivienda y habitación</div><div class="valor">${escapar(vivienda.nombre)}${direccion ? ` · ${escapar(direccion)}` : ""}<br>Habitación: ${escapar(habitacion.codigo)}</div></div><div class="bloque"><div class="etiqueta">Detalle de la entrega</div><div class="fila"><span>Cuota de fianza nº ${cuota.numero}</span><strong>${moneda.format(Number(cuota.importe))}</strong></div><div class="fila total"><span>Importe recibido</span><strong>${moneda.format(importeRecibido)}</strong></div><div class="fila"><span>Pendiente de esta cuota</span><strong>${moneda.format(importePendienteCuota)}</strong></div><div class="fila"><span>Fianza total pactada</span><strong>${moneda.format(Number(fianza.importe))}</strong></div></div><div class="pendientes"><div class="etiqueta">Depósito pendiente y próximos pagos</div>${pagosPendientesHtml}<div class="fila total"><span>Pendiente total de fianza</span><strong>${moneda.format(pendienteTotalFianza)}</strong></div></div><p class="nota">Se deja constancia de la cantidad recibida como entrega a cuenta de la fianza de la habitación indicada. Este recibo no constituye renta ni pago de suministros.</p></body></html>`;
-      ventana.document.open();
-      ventana.document.write(documento);
-      ventana.document.close();
+      const documento = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recibo de fianza - ${escapar(vivienda.nombre)} ${escapar(habitacion.codigo)}</title></head><body><div class="cabecera"><div><div class="titulo">RECIBO DE FIANZA</div><div class="meta" style="text-align:left">Justificante de entrega de depósito</div></div><div class="meta">Fecha de pago: ${escapar(formatoFecha.format(new Date(`${fechaPago}T12:00:00`)))}</div></div><div class="bloque"><div class="etiqueta">Propietario(s)</div><div class="valor">${escapar(propietariosTexto)}</div></div><div class="bloque"><div class="etiqueta">Inquilino(s) titular(es)</div><div class="valor">${escapar(titularesTexto)}</div></div><div class="bloque"><div class="etiqueta">Vivienda y habitación</div><div class="valor">${escapar(vivienda.nombre)}${direccion ? ` · ${escapar(direccion)}` : ""}<br>Habitación: ${escapar(habitacion.codigo)}</div></div><div class="bloque"><div class="etiqueta">Detalle de la entrega</div><div class="fila"><span>Cuota de fianza nº ${cuota.numero}</span><strong>${moneda.format(Number(cuota.importe))}</strong></div><div class="fila total"><span>Importe recibido</span><strong>${moneda.format(importeRecibido)}</strong></div><div class="fila"><span>Pendiente de esta cuota</span><strong>${moneda.format(importePendienteCuota)}</strong></div><div class="fila"><span>Fianza total pactada</span><strong>${moneda.format(Number(fianza.importe))}</strong></div></div><div class="pendientes"><div class="etiqueta">Depósito pendiente y próximos pagos</div>${pagosPendientesHtml}<div class="fila total"><span>Pendiente total de fianza</span><strong>${moneda.format(pendienteTotalFianza)}</strong></div></div><p class="nota">Se deja constancia de la cantidad recibida como entrega a cuenta de la fianza de la habitación indicada. Este recibo no constituye renta ni pago de suministros.</p></body></html>`;
+      descargarReciboPdf(documento, `Recibo-fianza-cuota-${cuota.numero}.pdf`);
     } catch (error) {
-      ventana.close();
+
       alert(error instanceof Error ? error.message : "No se pudo generar el recibo de fianza.");
     }
   }
