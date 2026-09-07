@@ -80,5 +80,48 @@ export function crearReciboPdf(documento: Document) {
 
 export function descargarReciboPdf(html: string, nombre: string) {
   const documento = new DOMParser().parseFromString(html, "text/html");
-  crearReciboPdf(documento).save(nombre);
+  const pdf = crearReciboPdf(documento);
+  const archivo = new File([pdf.output("blob")], nombre, { type: "application/pdf" });
+  const datos = { files: [archivo] };
+  if (!navigator.canShare?.(datos)) {
+    pdf.save(nombre);
+    return;
+  }
+
+  // A fresh click preserves Safari's required user activation after fetching data.
+  // Share only the File: never a blob URL, page URL, title or message.
+  const dialogo = document.createElement("dialog");
+  dialogo.style.cssText = "border:1px solid #cbd5e1;border-radius:16px;padding:24px;max-width:400px;width:calc(100% - 32px);color:#172033;background:white;box-sizing:border-box";
+  const titulo = document.createElement("h2");
+  titulo.textContent = "Recibo listo";
+  titulo.style.cssText = "font-size:20px;font-weight:700;margin:0 0 12px";
+  const mensaje = document.createElement("p");
+  mensaje.textContent = "Comparte el PDF por WhatsApp o guárdalo en Archivos.";
+  mensaje.style.cssText = "margin:0 0 20px";
+  const compartir = document.createElement("button");
+  compartir.type = "button";
+  compartir.textContent = "Compartir PDF";
+  compartir.style.cssText = "background:#2563eb;color:white;border:0;border-radius:8px;padding:12px 16px;font-weight:700;cursor:pointer";
+  const cerrar = document.createElement("button");
+  cerrar.type = "button";
+  cerrar.textContent = "Cerrar";
+  cerrar.style.cssText = "background:white;color:#172033;border:1px solid #cbd5e1;border-radius:8px;padding:12px 16px;margin-left:12px;cursor:pointer";
+  cerrar.onclick = () => dialogo.close();
+  compartir.onclick = async () => {
+    compartir.disabled = true;
+    try {
+      await navigator.share(datos);
+      dialogo.close();
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        mensaje.textContent = "No se pudo compartir el PDF. Pulsa Compartir PDF para intentarlo de nuevo.";
+      }
+    } finally {
+      compartir.disabled = false;
+    }
+  };
+  dialogo.addEventListener("close", () => dialogo.remove(), { once: true });
+  dialogo.append(titulo, mensaje, compartir, cerrar);
+  document.body.append(dialogo);
+  dialogo.showModal();
 }
