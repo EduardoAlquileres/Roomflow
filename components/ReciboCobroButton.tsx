@@ -4,7 +4,7 @@ import { FileText } from "lucide-react";
 import { descargarReciboPdf } from "@/lib/reciboPdf";
 import { Cobro } from "@/types/cobro";
 import { supabase } from "@/lib/supabase";
-import { EstanciaEconomica, estanciaParaPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
+import { EstanciaEconomica, estanciaParaPeriodo, personasEnHabitacionPeriodo, factorProrrateoEntrada } from "@/lib/estanciasCobros";
 
 type Props = {
   cobro: Cobro;
@@ -13,7 +13,7 @@ type Props = {
   inquilino: { nombre: string; apellidos: string; documento?: string | null } | null;
 };
 
-type HabitacionDocumento = { id: string; codigo: string; vivienda_id: string };
+type HabitacionDocumento = { id: string; codigo: string; vivienda_id: string; gastos: number };
 type ViviendaDocumento = { id: string; nombre: string; direccion: string | null };
 type Persona = { id: string; nombre: string; apellidos: string; documento: string };
 type FianzaDocumento = { id: string; importe: number; importe_entregado: number };
@@ -33,21 +33,29 @@ export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquili
     const estancia = estanciaParaPeriodo(estancias, cobro.inquilino_id, cobro.periodo_anio, cobro.periodo_mes);
     let viviendaRecibo = vivienda;
     let codigoHabitacion = habitacion?.codigo ?? "-";
-    let alquiler = Number(cobro.alquiler);
-    let gastos = Number(cobro.gastos);
+    const alquiler = Number(cobro.alquiler);
     let titulares: Persona[] = [];
 
+    const habitacionId = estancia?.habitacion_id ?? cobro.habitacion_id;
+    const { data: habitacionData, error: errorHabitacion } = await supabase
+      .from("habitaciones").select("id, codigo, vivienda_id, gastos").eq("id", habitacionId).single();
+    if (errorHabitacion) { alert(errorHabitacion.message); return; }
+    const habitacionRecibo = habitacionData as HabitacionDocumento;
+    codigoHabitacion = habitacionRecibo.codigo;
+    const personas = Math.max(1, personasEnHabitacionPeriodo(estancias, habitacionId, cobro.periodo_anio, cobro.periodo_mes, estancia?.fecha_entrada));
+    const factor = estancia ? factorProrrateoEntrada(estancia, cobro.periodo_anio, cobro.periodo_mes) : 1;
+    const gastosPorPersona = Number(habitacionRecibo.gastos);
+    if (!Number.isFinite(gastosPorPersona) || habitacionRecibo.gastos == null || gastosPorPersona < 0) {
+      alert("Revisa los gastos por persona de la habitación antes de generar el recibo.");
+      return;
+    }
+    const gastos = Number((gastosPorPersona * personas * factor).toFixed(2));
+
     if (estancia) {
-      const { data: habitacionData, error: errorHabitacion } = await supabase
-        .from("habitaciones").select("id, codigo, vivienda_id").eq("id", estancia.habitacion_id).single();
-      if (errorHabitacion) { alert(errorHabitacion.message); return; }
-      const habitacionHistorica = habitacionData as HabitacionDocumento;
       const { data: viviendaData, error: errorVivienda } = await supabase
-        .from("viviendas").select("id, nombre, direccion").eq("id", habitacionHistorica.vivienda_id).single();
+        .from("viviendas").select("id, nombre, direccion").eq("id", habitacionRecibo.vivienda_id).single();
       if (errorVivienda) { alert(errorVivienda.message); return; }
       viviendaRecibo = viviendaData as ViviendaDocumento;
-      codigoHabitacion = habitacionHistorica.codigo;
-      alquiler = Number(estancia.precio);
       const idsTitulares = [...new Set(estancias
         .map((item) => estanciaParaPeriodo(estancias, item.inquilino_id, cobro.periodo_anio, cobro.periodo_mes))
         .filter((item): item is EstanciaEconomica => Boolean(item) && item.habitacion_id === estancia.habitacion_id)
@@ -57,7 +65,6 @@ export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquili
         : { data: [], error: null };
       if (errorPersonas) { alert(errorPersonas.message); return; }
       titulares = (personasData ?? []) as Persona[];
-      gastos = Number(estancia.gastos) * Math.max(1, personasEnHabitacionPeriodo(estancias, estancia.habitacion_id, cobro.periodo_anio, cobro.periodo_mes, estancia.fecha_entrada));
     }
 
     if (!viviendaRecibo) { alert("No se ha encontrado la vivienda de este cobro."); return; }
