@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { DoorOpen } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 
 import KpiCard from "@/components/KpiCard";
 import InformeSituacionButton from "@/components/InformeSituacionButton";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MessageCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 
 type Props = {
   inquilinoId: string;

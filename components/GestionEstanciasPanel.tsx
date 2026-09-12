@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CalendarRange, Pencil, Plus, Save, Trash2, X } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { sincronizarCobrosHistoricos } from "@/lib/sincronizarCobrosHistoricos";
 import { Estancia, Habitacion, Vivienda } from "@/types";
 

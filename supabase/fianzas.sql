@@ -20,4 +20,4 @@ create table if not exists public.fianzas (
 
 create unique index if not exists idx_fianzas_estancia on public.fianzas (estancia_id);
 create index if not exists idx_fianzas_estado on public.fianzas (estado);
-alter table public.fianzas disable row level security;
+alter table public.fianzas enable row level security;

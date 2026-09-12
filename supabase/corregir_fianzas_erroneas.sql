@@ -27,4 +27,5 @@ begin
 end;
 $$;
 
-grant execute on function public.roomflow_eliminar_fianza_erronea(uuid) to anon, authenticated;
+revoke execute on function public.roomflow_eliminar_fianza_erronea(uuid) from public, anon, authenticated;
+grant execute on function public.roomflow_eliminar_fianza_erronea(uuid) to service_role;

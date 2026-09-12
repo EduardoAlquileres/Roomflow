@@ -1,4 +1,5 @@
 import { generarCobrosPendientes } from "@/lib/generarCobrosPendientes";
+import { clienteServidor } from "@/lib/supabaseServidor";
 
 export async function GET(request: Request) {
   const secreto = process.env.CRON_SECRET;
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const resultado = await generarCobrosPendientes();
+    const resultado = await generarCobrosPendientes(undefined, clienteServidor());
     return Response.json(resultado);
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : "No se pudieron generar los cobros.";

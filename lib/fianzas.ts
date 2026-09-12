@@ -1,5 +1,5 @@
 import { CuotaFianza, Fianza } from "@/types";
-import { supabase } from "./supabase";
+import { supabase } from "#roomflow-supabase";
 
 export async function obtenerFianzas(): Promise<Fianza[]> {
   const { data, error } = await supabase

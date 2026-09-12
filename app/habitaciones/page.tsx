@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import HabitacionTable from "@/components/HabitacionTable";
 import HabitacionForm from "@/components/HabitacionForm";
 
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 
 type Habitacion = {
   id: string;

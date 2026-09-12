@@ -26,6 +26,6 @@ create table if not exists public.gastos (
 
 alter table public.gastos add column if not exists grupo_prorrateo uuid;
 alter table public.gastos add column if not exists es_prorrateado boolean not null default false;
-alter table public.gastos disable row level security;
+alter table public.gastos enable row level security;
 create index if not exists idx_gastos_vivienda_fecha on public.gastos (vivienda_id, fecha desc);
 create index if not exists idx_gastos_prorrateo on public.gastos (grupo_prorrateo);

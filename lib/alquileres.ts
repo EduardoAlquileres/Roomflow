@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase } from "#roomflow-supabase";
 
 export async function obtenerAlquilerActivo(habitacionId: string) {
   const { data, error } = await supabase

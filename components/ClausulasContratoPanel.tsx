@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { FilePlus2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { ClausulaContrato, TipoClausulaContrato } from "@/types";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 
 type Props = { iniciales: ClausulaContrato[] };
 type Formulario = { titulo: string; contenido: string; tipo_documento: TipoClausulaContrato; activa: boolean; orden: string };

@@ -1,1 +1,1 @@
-alter table public.gastos disable row level security;
+alter table public.gastos enable row level security;

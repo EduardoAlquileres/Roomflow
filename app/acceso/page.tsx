@@ -25,7 +25,7 @@ function FormularioAcceso() {
       if (!respuesta.ok) throw new Error(resultado.error || "No se pudo iniciar sesión.");
 
       const volver = searchParams.get("volver");
-      window.location.assign(volver?.startsWith("/") ? volver : "/dashboard");
+      window.location.assign(volver?.startsWith("/") && !volver.startsWith("//") && !volver.includes("\\") ? volver : "/dashboard");
     } catch (causa) {
       setError(causa instanceof Error ? causa.message : "No se pudo iniciar sesión.");
       setEnviando(false);

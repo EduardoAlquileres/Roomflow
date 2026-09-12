@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import ViviendaTable from "@/components/ViviendaTable";
 import ViviendaForm from "@/components/ViviendaForm";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 
 type Vivienda = {
   id: string;

@@ -3,7 +3,7 @@
 import { FileText } from "lucide-react";
 import { descargarReciboPdf } from "@/lib/reciboPdf";
 import { Cobro } from "@/types/cobro";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { EstanciaEconomica, estanciaParaPeriodo } from "@/lib/estanciasCobros";
 
 type Props = {

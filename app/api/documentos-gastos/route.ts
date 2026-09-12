@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { abrirDocumentoOneDrive, crearSesionSubidaOneDrive, eliminarDocumentoOneDrive } from "@/lib/onedriveServidor";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabaseServidor";
 
 export const dynamic = "force-dynamic";
 

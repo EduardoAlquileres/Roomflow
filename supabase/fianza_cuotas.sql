@@ -17,4 +17,4 @@ create table if not exists public.fianza_cuotas (
 );
 
 create index if not exists idx_fianza_cuotas_fianza on public.fianza_cuotas (fianza_id, fecha_prevista);
-alter table public.fianza_cuotas disable row level security;
+alter table public.fianza_cuotas enable row level security;

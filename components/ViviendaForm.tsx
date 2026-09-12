@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import AppButton from "@/components/AppButton";
 import { Home, MapPin, Save, X } from "lucide-react";
 

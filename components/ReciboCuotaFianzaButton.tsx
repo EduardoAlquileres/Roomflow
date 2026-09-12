@@ -2,7 +2,7 @@
 
 import { FileText } from "lucide-react";
 import { descargarReciboPdf } from "@/lib/reciboPdf";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 
 type Props = {
   fianzaId: string;

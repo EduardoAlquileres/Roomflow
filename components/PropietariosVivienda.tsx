@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { Propietario, Titularidad } from "@/lib/propietarios";
 
 type Props = { viviendaId: string; propietarios: Propietario[]; titularesIniciales: Titularidad[] };

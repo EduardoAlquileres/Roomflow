@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { recalcularEstadoCobro } from "@/lib/cobros";
 
 export type MovimientoCobro = {

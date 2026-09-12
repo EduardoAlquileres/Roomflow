@@ -11,5 +11,5 @@ create table if not exists public.clausulas_contrato (
   created_at timestamptz not null default now()
 );
 
-alter table public.clausulas_contrato disable row level security;
-grant select, insert, update, delete on table public.clausulas_contrato to anon, authenticated;
+alter table public.clausulas_contrato enable row level security;
+grant select, insert, update, delete on table public.clausulas_contrato to service_role;

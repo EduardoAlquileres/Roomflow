@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { Cobro } from "@/types/cobro";
 import { EstanciaEconomica, estanciaParaPeriodo, estanciaConGastosHabitacion, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 

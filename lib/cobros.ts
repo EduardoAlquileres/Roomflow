@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { Cobro } from "@/types/cobro";
 
 export async function obtenerCobros(): Promise<Cobro[]> {

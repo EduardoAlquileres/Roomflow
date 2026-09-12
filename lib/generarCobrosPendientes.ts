@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { Cobro } from "@/types/cobro";
 import { EstanciaEconomica, estanciaParaPeriodo, estanciaConGastosHabitacion, fechaVencimientoPeriodo, importesCobroPeriodo, personasEnHabitacionPeriodo } from "@/lib/estanciasCobros";
 
@@ -27,7 +27,8 @@ function clavePeriodo(estancia: EstanciaEconomica, anio: number, mes: number) {
 }
 
 /** Crea solo los cobros que faltan usando el precio y la habitación vigentes en cada mes. */
-export async function generarCobrosPendientes(hasta = fechaLocalHoy()): Promise<ResultadoGeneracionCobros> {
+export async function generarCobrosPendientes(hasta = fechaLocalHoy(), cliente = supabase): Promise<ResultadoGeneracionCobros> {
+  const supabase = cliente;
   const { data, error: errorEstancias } = await supabase
     .from("estancias")
     .select("id, inquilino_id, habitacion_id, fecha_entrada, fecha_salida, precio, gastos, created_at")

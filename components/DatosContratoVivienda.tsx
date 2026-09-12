@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Save } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { Vivienda } from "@/types/vivienda";
 
 export default function DatosContratoVivienda({ vivienda }: { vivienda: Vivienda }) {

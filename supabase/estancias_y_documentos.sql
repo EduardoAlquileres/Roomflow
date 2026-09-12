@@ -29,8 +29,8 @@ create table if not exists public.inquilino_documentos (
 );
 
 create index if not exists idx_inquilino_documentos_inquilino on public.inquilino_documentos (inquilino_id, created_at desc);
-alter table public.estancias disable row level security;
-alter table public.inquilino_documentos disable row level security;
+alter table public.estancias enable row level security;
+alter table public.inquilino_documentos enable row level security;
 
 insert into storage.buckets (id, name, public)
 values ('documentos-inquilinos', 'documentos-inquilinos', false)
@@ -39,7 +39,7 @@ on conflict (id) do nothing;
 do $$
 begin
   if not exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'Documentos de inquilinos accesibles') then
-    create policy "Documentos de inquilinos accesibles" on storage.objects for all to anon
+    create policy "Documentos de inquilinos accesibles" on storage.objects for all to service_role
     using (bucket_id = 'documentos-inquilinos')
     with check (bucket_id = 'documentos-inquilinos');
   end if;

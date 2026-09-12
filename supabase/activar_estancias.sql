@@ -1,1 +1,1 @@
-;;;;alter table public.estancias disable row level security;
+;;;;alter table public.estancias enable row level security;

@@ -21,5 +21,5 @@ values
   ('Eva Marina Campaner Moran', '43111836S')
 on conflict (documento) do update set nombre_completo = excluded.nombre_completo;
 
-alter table public.propietarios disable row level security;
-alter table public.vivienda_propietarios disable row level security;
+alter table public.propietarios enable row level security;
+alter table public.vivienda_propietarios enable row level security;

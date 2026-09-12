@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase } from "#roomflow-supabase";
 
 export type Propietario = { id: string; nombre_completo: string; documento: string };
 export type Titularidad = { propietario_id: string; porcentaje: number };

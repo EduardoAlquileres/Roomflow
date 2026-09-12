@@ -9,4 +9,4 @@ create table if not exists public.integracion_onedrive (
   updated_at timestamptz not null default now()
 );
 
-alter table public.integracion_onedrive disable row level security;
+alter table public.integracion_onedrive enable row level security;

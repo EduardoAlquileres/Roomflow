@@ -6,7 +6,7 @@ import { Camera, ExternalLink, FileText, Pencil, Plus, ReceiptText, Trash2, Uplo
 import { CATEGORIAS_GASTO } from "@/constants/gastos";
 import { crearGastos } from "@/lib/gastos";
 import { abrirDocumentoGasto, eliminarDocumentoGasto, subirDocumentoGasto } from "@/lib/documentosGasto";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { Gasto } from "@/types/gasto";
 import { Vivienda } from "@/types/vivienda";
 

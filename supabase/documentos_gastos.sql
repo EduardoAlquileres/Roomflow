@@ -14,7 +14,7 @@ begin
       and policyname = 'Documentos de gastos accesibles'
   ) then
     create policy "Documentos de gastos accesibles"
-      on storage.objects for all to anon
+      on storage.objects for all to service_role
       using (bucket_id = 'documentos-gastos')
       with check (bucket_id = 'documentos-gastos');
   end if;

@@ -14,4 +14,4 @@ create table if not exists public.mensajes_redes (
 );
 
 create index if not exists mensajes_redes_estado_idx on public.mensajes_redes (estado, created_at desc);
-alter table public.mensajes_redes disable row level security;
+alter table public.mensajes_redes enable row level security;

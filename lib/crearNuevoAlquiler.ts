@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { NuevoAlquiler } from "@/types/nuevoAlquiler";
 import { generarCobrosPendientes } from "@/lib/generarCobrosPendientes";
 import { factorProrrateoEntrada, fechaVencimientoPeriodo } from "@/lib/estanciasCobros";

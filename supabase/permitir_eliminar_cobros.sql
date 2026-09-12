@@ -8,4 +8,5 @@ drop policy if exists "RoomFlow puede eliminar cobros" on public.cobros;
 create policy "RoomFlow puede eliminar cobros"
 on public.cobros
 for delete
+to service_role
 using (true);

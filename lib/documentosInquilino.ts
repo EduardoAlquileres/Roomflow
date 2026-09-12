@@ -1,5 +1,5 @@
 import { DocumentoInquilino } from "@/types";
-import { supabase } from "./supabase";
+import { supabase } from "#roomflow-supabase";
 
 const MAX_TAMANO = 25 * 1024 * 1024;
 const PREFIJO_ONEDRIVE = "onedrive:";

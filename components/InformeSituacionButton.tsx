@@ -1,7 +1,7 @@
 "use client";
 
 import { FileDown } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 
 type Vivienda = {
   id: string;

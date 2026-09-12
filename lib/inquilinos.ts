@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase } from "#roomflow-supabase";
 import { Inquilino } from "@/types";
 
 /**

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import { MensajeRed } from "@/types/mensaje-red";
 
 function comprobar(error: { message?: string } | null) {

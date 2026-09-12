@@ -25,4 +25,4 @@ alter table public.inquilinos add column if not exists profesion text;
 alter table public.inquilinos add column if not exists empresa text;
 alter table public.inquilinos add column if not exists activo boolean not null default true;
 create index if not exists idx_inquilinos_habitacion_activo on public.inquilinos (habitacion_id, activo);
-alter table public.inquilinos disable row level security;
+alter table public.inquilinos enable row level security;

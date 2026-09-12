@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, CheckCircle2, Pencil, Plus, X } from "lucide-react";
 import { CuotaFianza } from "@/types";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "#roomflow-supabase";
 import ReciboCuotaFianzaButton from "@/components/ReciboCuotaFianzaButton";
 
 const moneda = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });

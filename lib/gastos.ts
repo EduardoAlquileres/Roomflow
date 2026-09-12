@@ -1,5 +1,5 @@
 import { Gasto } from "@/types/gasto";
-import { supabase } from "./supabase";
+import { supabase } from "#roomflow-supabase";
 
 export async function obtenerGastos(): Promise<Gasto[]> {
   const { data, error } = await supabase.from("gastos").select("*").order("fecha", { ascending: false }).order("created_at", { ascending: false });
