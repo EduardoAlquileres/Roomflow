@@ -87,6 +87,7 @@ export default function HabitacionForm({
       gastos,
       fianza_meses: fianza,
       estado,
+      ...(habitacion && habitacion.estado !== estado ? { disponible_desde: null } : {}),
       observaciones,
     };
 

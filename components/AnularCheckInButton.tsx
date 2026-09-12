@@ -20,7 +20,7 @@ export default function AnularCheckInButton({ inquilinoId, habitacionId, nombreI
       if (errorEliminarCobros) throw errorEliminarCobros;
       const { error: errorEliminarInquilino } = await supabase.from("inquilinos").delete().eq("id", inquilinoId);
       if (errorEliminarInquilino) throw errorEliminarInquilino;
-      const { error: errorHabitacion } = await supabase.from("habitaciones").update({ estado: "LIBRE" }).eq("id", habitacionId);
+      const { error: errorHabitacion } = await supabase.from("habitaciones").update({ estado: "LIBRE", disponible_desde: null }).eq("id", habitacionId);
       if (errorHabitacion) throw errorHabitacion;
       router.refresh();
     } catch (error) { alert(error instanceof Error ? error.message : "No se pudo anular el check-in."); }

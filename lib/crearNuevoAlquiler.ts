@@ -252,7 +252,7 @@ export async function crearNuevoAlquiler(datos: NuevoAlquiler) {
 
   const { error: errorEstado } = await supabase
     .from("habitaciones")
-    .update({ estado: datos.tipoInicio === "RESERVA" ? "RESERVADA" : "OCUPADA" })
+    .update({ estado: datos.tipoInicio === "RESERVA" ? "RESERVADA" : "OCUPADA", disponible_desde: null })
     .eq("id", datos.habitacionId);
 
   if (errorEstado) throw errorEstado;

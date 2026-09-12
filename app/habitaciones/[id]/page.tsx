@@ -5,6 +5,7 @@ import { obtenerInquilinosHabitacion } from "@/lib/inquilinos";
 import { obtenerCobrosHabitacion } from "@/lib/cobros";
 
 import CheckOutForm from "@/components/CheckOutForm";
+import AvisoSalidaForm from "@/components/AvisoSalidaForm";
 import EditarCheckInForm from "@/components/EditarCheckInForm";
 import AnularCheckInButton from "@/components/AnularCheckInButton";
 import DocumentoReservaButton from "@/components/DocumentoReservaButton";
@@ -145,6 +146,8 @@ export default async function HabitacionPage({
                 <ConvertirReservaButton habitacionId={habitacion.id} />
               )}
               <DocumentoContratoButton habitacionId={habitacion.id} />
+
+              {habitacion.estado === "OCUPADA" && <AvisoSalidaForm habitacionId={habitacion.id} fechaInicial={habitacion.disponible_desde} />}
 
               <CheckOutForm
                 inquilinoId={inquilino.id}

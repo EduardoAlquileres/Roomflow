@@ -92,7 +92,7 @@ export async function actualizarEstadoHabitacion(
 ): Promise<void> {
   const { error } = await supabase
     .from("habitaciones")
-    .update({ estado })
+    .update({ estado, disponible_desde: null })
     .eq("id", id);
 
   if (error) throw error;

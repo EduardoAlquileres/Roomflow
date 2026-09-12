@@ -53,6 +53,9 @@ body {
 .rf-availability-item p { margin:10px 0; color:#475569; font-size:13px; line-height:1.45; }
 .rf-availability-item a { color:#2563eb; font-size:13px; font-weight:750; text-decoration:none; }
 .rf-availability-item a:hover { text-decoration:underline; }
+.rf-availability-upcoming { border-color:#fde68a; background:#fffbeb; }
+.rf-availability-upcoming > div { color:#78350f; flex-wrap:wrap; }
+.rf-availability-upcoming span { background:#fef3c7; color:#92400e; }
 .rf-availability-empty { margin:18px 0 0; color:#64748b; font-size:14px; }
 .rf-table-shell { overflow-x:auto; border:1px solid #e2e8f0; border-radius:16px; background:#fff; box-shadow:0 2px 8px rgb(15 23 42 / .04); }
 .rf-data-table { width:100%; min-width:760px; border-collapse:collapse; font-size:14px; }
