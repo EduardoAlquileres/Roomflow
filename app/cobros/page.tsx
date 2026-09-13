@@ -23,6 +23,7 @@ import {
 } from "@/lib/cobros";
 
 import CobrosTable from "@/components/CobrosTable";
+import EditarCobroModal from "@/components/EditarCobroModal";
 import RegistrarPagoModal from "@/components/RegistrarPagoModal";
 import HistorialCobrosModal from "@/components/HistorialCobrosModal";
 import { registrarPago } from "@/lib/movimientosCobro";
@@ -165,6 +166,7 @@ const [guardandoPago, setGuardandoPago] =
 
 const [cobroHistorial, setCobroHistorial] =
   useState<Cobro | null>(null);
+const [cobroEditando, setCobroEditando] = useState<Cobro | null>(null);
   const habitacionesDisponibles = filtroVivienda
     ? habitaciones.filter((habitacion) => habitacion.vivienda_id === filtroVivienda)
     : habitaciones;
@@ -579,8 +581,7 @@ async function guardarPago(datos: {
     setHistorialAbierto(true);
   }}
   onEditar={(cobro) => {
-    setCobroHistorial(cobro);
-    setHistorialAbierto(true);
+    setCobroEditando(cobro);
   }}
   onEliminar={eliminarCobroSeleccionado}
   onMarcarDeuda={convertirEnDeuda}
@@ -600,6 +601,8 @@ async function guardarPago(datos: {
   }}
   onGuardar={guardarPago}
 />
+
+{cobroEditando && <EditarCobroModal cobro={cobroEditando} onCerrar={() => setCobroEditando(null)} onGuardado={cargarDatos} />}
 
 <HistorialCobrosModal
   abierto={historialAbierto}
