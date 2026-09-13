@@ -39,6 +39,7 @@ function duracionEstancia(entrada: string, salida: string | null) {
 export default function InquilinosListado({ inquilinos, habitaciones, viviendas }: Props) {
   const [viviendaId, setViviendaId] = useState("");
   const [habitacionId, setHabitacionId] = useState("");
+  const [estado, setEstado] = useState("");
 
   const habitacionesDisponibles = viviendaId
     ? habitaciones.filter((habitacion) => habitacion.vivienda_id === viviendaId)
@@ -47,6 +48,8 @@ export default function InquilinosListado({ inquilinos, habitaciones, viviendas 
     const habitacion = habitaciones.find((item) => item.id === inquilino.habitacion_id);
     if (viviendaId && habitacion?.vivienda_id !== viviendaId) return false;
     if (habitacionId && inquilino.habitacion_id !== habitacionId) return false;
+    if (estado === "activo" && !inquilino.activo) return false;
+    if (estado === "finalizado" && inquilino.activo) return false;
     return true;
   });
 
@@ -55,7 +58,7 @@ export default function InquilinosListado({ inquilinos, habitaciones, viviendas 
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 p-5">
         <div className="flex items-center gap-3"><div className="rounded-lg bg-blue-100 p-2 text-blue-600"><Users size={21} /></div><div><h2 className="font-bold text-slate-900">Todos los inquilinos</h2><p className="text-sm text-slate-500">{inquilinosFiltrados.length} de {inquilinos.length} registros</p></div></div>
       </div>
-      <div className="grid gap-3 border-b border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+      <div className="grid gap-3 border-b border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
         <label className="text-sm font-medium text-slate-700">Vivienda
           <select value={viviendaId} onChange={(event) => { setViviendaId(event.target.value); setHabitacionId(""); }} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal text-slate-900">
             <option value="">Todas las viviendas</option>
@@ -66,6 +69,13 @@ export default function InquilinosListado({ inquilinos, habitaciones, viviendas 
           <select value={habitacionId} onChange={(event) => setHabitacionId(event.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal text-slate-900">
             <option value="">Todas las habitaciones</option>
             {habitacionesDisponibles.map((habitacion) => <option key={habitacion.id} value={habitacion.id}>{habitacion.codigo}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium text-slate-700">Estado
+          <select value={estado} onChange={(event) => setEstado(event.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal text-slate-900">
+            <option value="">Todos los estados</option>
+            <option value="activo">Activo</option>
+            <option value="finalizado">Finalizado</option>
           </select>
         </label>
       </div>
