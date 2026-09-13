@@ -13,6 +13,8 @@ export interface Inquilino {
   fecha_entrada: string;
   fecha_salida: string | null;
   activo: boolean;
+  empadronado?: boolean | null;
+  empadronamiento_vivienda_id?: string | null;
   observaciones: string | null;
   created_at: string;
 }
