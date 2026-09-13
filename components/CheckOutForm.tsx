@@ -35,6 +35,7 @@ export default function CheckOutForm({ inquilinoId, habitacionId, fechaEntrada }
       setGuardando(true);
       setError("");
       await realizarCheckOut({ inquilinoId, habitacionId, fechaSalida, observaciones, cumpleContrato, motivoRetencion });
+      router.push(`/inquilinos/${inquilinoId}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo realizar el Check-Out.");
@@ -50,6 +51,7 @@ export default function CheckOutForm({ inquilinoId, habitacionId, fechaEntrada }
   return (
     <div className="mt-6 rounded-lg border border-red-100 bg-red-50 p-4">
       <h3 className="font-semibold text-gray-900">Confirmar salida de la habitación</h3>
+      <p className="mt-1 text-sm text-gray-600">Al terminar se abrirá la ficha del inquilino para preparar el documento de finalización, imprimirlo o compartirlo por WhatsApp.</p>
       <p className="mt-1 text-sm text-gray-600">Saldrán todos los titulares de esta habitación. El alquiler, los cobros y la fianza se gestionan como una única unidad.</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <label className="block text-sm font-medium text-gray-700">Fecha de salida
