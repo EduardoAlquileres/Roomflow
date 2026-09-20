@@ -19,6 +19,9 @@ export interface Cobro {
 
   gastos: number;
 
+  suplementos?: number;
+  detalle_suplementos?: { id: string; concepto: string; importe: number }[];
+
   total: number;
 
   pagado: number;

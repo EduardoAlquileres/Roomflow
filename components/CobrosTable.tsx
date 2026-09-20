@@ -60,7 +60,7 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ background: "#f8fafc" }}>
             <tr>
-              <th style={th}>Periodo</th><th style={th}>Vivienda</th><th style={th}>Habitación</th><th style={th}>Inquilino</th><th style={th}>Alquiler</th><th style={th}>Gastos</th><th style={th}>Total</th><th style={th}>Pagado</th><th style={th}>Pendiente</th><th style={th}>Estado</th><th style={th}>Acciones</th>
+              <th style={th}>Periodo</th><th style={th}>Vivienda</th><th style={th}>Habitación</th><th style={th}>Inquilino</th><th style={th}>Alquiler</th><th style={th}>Gastos</th><th style={th}>Suplementos</th><th style={th}>Total</th><th style={th}>Pagado</th><th style={th}>Pendiente</th><th style={th}>Estado</th><th style={th}>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -78,7 +78,7 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
                 <td style={td}>{habitacion?.codigo ?? "-"}</td>
                 <td style={td}>{inquilino ? `${inquilino.nombre} ${inquilino.apellidos}` : "-"}</td>
                 <td style={td}>{formatoMoneda(Number(cobro.alquiler))}</td>
-                <td style={td}>{formatoMoneda(Number(cobro.gastos))}</td>
+                <td style={td}>{formatoMoneda(Number(cobro.gastos))}</td><td style={td}>{formatoMoneda(Number(cobro.suplementos ?? 0))}{cobro.detalle_suplementos?.map((s) => <div key={s.id} className="text-xs text-slate-500">{s.concepto}: {formatoMoneda(Number(s.importe))}</div>)}</td>
                 <td style={td}>{formatoMoneda(Number(cobro.total))}</td>
                 <td style={td}>{formatoMoneda(Number(cobro.pagado))}</td>
                 <td style={td}>{formatoMoneda(Number(cobro.pendiente))}</td>
@@ -108,6 +108,7 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
               <div className="mt-4 grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-3 text-sm">
                 <Importe titulo="Alquiler" valor={formatoMoneda(Number(cobro.alquiler))} />
                 <Importe titulo="Gastos" valor={formatoMoneda(Number(cobro.gastos))} />
+                {Number(cobro.suplementos) > 0 && <div><Importe titulo="Suplementos" valor={formatoMoneda(Number(cobro.suplementos))} />{cobro.detalle_suplementos?.map((s) => <p key={s.id} className="text-xs text-slate-500">{s.concepto}: {formatoMoneda(Number(s.importe))}</p>)}</div>}
                 <Importe titulo="Total" valor={formatoMoneda(Number(cobro.total))} />
                 <Importe titulo="Pagado" valor={formatoMoneda(Number(cobro.pagado))} color="text-emerald-700" />
                 <div className="col-span-2"><Importe titulo="Pendiente" valor={formatoMoneda(Number(cobro.pendiente))} color="text-rose-600" /></div>

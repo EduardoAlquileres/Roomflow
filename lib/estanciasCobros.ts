@@ -39,6 +39,11 @@ export function estanciaParaPeriodo(estancias: EstanciaEconomica[], inquilinoId:
   return ordenadas[0] ?? null;
 }
 
+/** Los contratos sucesivos de una habitación no comparten titulares ni fianza. */
+export function estanciasDelContrato(estancias: EstanciaEconomica[], estancia: EstanciaEconomica) {
+  return estancias.filter((item) => item.habitacion_id === estancia.habitacion_id && item.fecha_entrada === estancia.fecha_entrada);
+}
+
 export function personasEnHabitacionPeriodo(
   estancias: EstanciaEconomica[],
   habitacionId: string,

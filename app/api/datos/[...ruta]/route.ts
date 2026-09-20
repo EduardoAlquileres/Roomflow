@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { COOKIE_NAME, origenValido, sesionValida } from "@/lib/sesion";
 
 export const dynamic = "force-dynamic";
-const tablas = new Set(["viviendas", "habitaciones", "inquilinos", "estancias", "cobros", "movimientos_cobro", "fianzas", "fianza_cuotas", "gastos", "propietarios", "vivienda_propietarios", "inquilino_documentos", "clausulas_contrato", "mensajes_redes"]);
+const tablas = new Set(["viviendas", "habitaciones", "inquilinos", "estancias", "cobros", "movimientos_cobro", "fianzas", "fianza_cuotas", "gastos", "propietarios", "vivienda_propietarios", "inquilino_documentos", "clausulas_contrato", "mensajes_redes", "suplementos_estancia"]);
 const funciones = new Set(["roomflow_eliminar_cobro", "roomflow_eliminar_fianza_erronea"]);
 
 async function atender(request: NextRequest, context: { params: Promise<{ ruta: string[] }> }) {

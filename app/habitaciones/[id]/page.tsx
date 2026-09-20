@@ -12,6 +12,8 @@ import DocumentoReservaButton from "@/components/DocumentoReservaButton";
 import DocumentoContratoButton from "@/components/DocumentoContratoButton";
 import ConvertirReservaButton from "@/components/ConvertirReservaButton";
 import Link from "next/link";
+import SuplementosPanel from "@/components/SuplementosPanel";
+import { supabase } from "#roomflow-supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,10 @@ export default async function HabitacionPage({
   const inquilino = inquilinos[0] ?? null;
 
   const cobros = await obtenerCobrosHabitacion(id);
+  const { data: estancias, error: errorEstancias } = await supabase.from("estancias").select("id,fecha_entrada,fecha_salida,estado").eq("habitacion_id", id).order("fecha_entrada", { ascending: false });
+  if (errorEstancias) throw errorEstancias;
+  const { data: suplementos, error: errorSuplementos } = estancias?.length ? await supabase.from("suplementos_estancia").select("*").in("estancia_id", estancias.map((e) => e.id)).order("fecha_inicio", { ascending: false }) : { data: [], error: null };
+  if (errorSuplementos) throw errorSuplementos;
   return (
     <div className="space-y-8">
 
@@ -174,6 +180,8 @@ export default async function HabitacionPage({
 
       </div>
 
+      <SuplementosPanel suplementos={suplementos ?? []} estancias={estancias ?? []} />
+
       <div className="rounded-xl border bg-white p-6">
 
         <h2 className="mb-6 text-xl font-semibold">
@@ -229,6 +237,7 @@ export default async function HabitacionPage({
 
                   <td className="py-3">
   {cobro.periodo_mes}/{cobro.periodo_anio}
+{cobro.detalle_suplementos?.map((s) => <p key={s.id} className="text-xs text-slate-500">{s.concepto}: {Number(s.importe).toFixed(2)} €</p>)}
 </td>
 
                   <td className="text-right">
