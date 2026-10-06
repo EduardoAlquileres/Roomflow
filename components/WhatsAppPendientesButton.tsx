@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Users } from "lucide-react";
 import { supabase } from "#roomflow-supabase";
 
 type Props = {
@@ -43,6 +43,7 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
   const [preparando, setPreparando] = useState(false);
   const [destinatarios, setDestinatarios] = useState<Destinatario[]>([]);
   const [detalleMensaje, setDetalleMensaje] = useState<string[]>([]);
+  const mensajeGrupo = ["Hola a todos,", "", `Aviso de importes pendientes correspondiente a ${nombre}:`, "", ...detalleMensaje].join("\n");
 
   async function prepararMensajes() {
     if (preparando) return;
@@ -162,13 +163,30 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
     </button>
     {destinatarios.length > 0 && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-        <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+        <div role="dialog" aria-modal="true" aria-label="Enviar aviso por WhatsApp" className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Enviar aviso por WhatsApp</h2>
-              <p className="mt-1 text-sm text-slate-500">Abre el mensaje de cada titular y confirma el envío en WhatsApp.</p>
+              <p className="mt-1 text-sm text-slate-500">Elige enviar al grupo de todos los inquilinos o a un titular. Confirma el envío en WhatsApp.</p>
             </div>
             <button type="button" onClick={() => setDestinatarios([])} className="text-sm font-semibold text-slate-600">Cerrar</button>
+          </div>
+          <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4">
+            <p className="font-semibold text-slate-900">Grupo de todos los inquilinos</p>
+            <p className="mt-1 text-sm text-slate-600">Selecciona en WhatsApp el grupo donde están todos los inquilinos.</p>
+            <details className="mt-3 text-sm text-slate-600">
+              <summary className="cursor-pointer font-semibold">Ver mensaje para el grupo</summary>
+              <p className="mt-2 whitespace-pre-wrap">{mensajeGrupo}</p>
+            </details>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(mensajeGrupo)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+            >
+              <Users size={18} aria-hidden="true" />
+              Enviar al grupo de todos los inquilinos
+            </a>
           </div>
           <div className="mt-5 divide-y divide-slate-100 rounded-xl border border-slate-200">
             {destinatarios.map((destinatario) => (
