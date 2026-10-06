@@ -3,7 +3,7 @@ const ts = require('typescript');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 
-test('informe incluye meses anteriores y deudas, conserva céntimos y el responsable original', async () => {
+test('informe incluye pendientes anteriores de activos y mantiene deudas separadas', async () => {
   const datos = {
     viviendas: [{ id: 'v', nombre: 'Inca' }],
     habitaciones: [{ id: 'h', vivienda_id: 'v', codigo: 'H1', estado: 'OCUPADA' }],
@@ -11,7 +11,7 @@ test('informe incluye meses anteriores y deudas, conserva céntimos y el respons
     fianzas: [],
     cobros: [
       { habitacion_id: 'h', inquilino_id: 'viejo', pendiente: 10.67, periodo_anio: 2025, periodo_mes: 12, estado: 'DEUDA' },
-      { habitacion_id: 'h', inquilino_id: 'viejo', pendiente: 20.25, periodo_anio: 2026, periodo_mes: 9, estado: 'PARCIAL' },
+      { habitacion_id: 'h', inquilino_id: 'nuevo', pendiente: 20.25, periodo_anio: 2026, periodo_mes: 9, estado: 'PARCIAL' },
       { habitacion_id: 'h', inquilino_id: 'nuevo', pendiente: 0, periodo_anio: 2026, periodo_mes: 10, estado: 'PAGADO' },
     ],
   };
@@ -29,10 +29,15 @@ test('informe incluye meses anteriores y deudas, conserva céntimos y el respons
   await m.exports.default().props.onClick();
   assert.match(html,/diciembre de 2025/);
   assert.match(html,/septiembre de 2026/);
-  assert.match(html,/30,92/);
+  const actuales = html.split('<h2>Pendientes de pago actuales</h2>')[1].split('<h2>Deudas históricas no cobradas</h2>')[0];
+  const historicas = html.split('<h2>Deudas históricas no cobradas</h2>')[1].split('<h2>Situación por vivienda</h2>')[0];
+  assert.match(actuales,/20,25/);
+  assert.doesNotMatch(actuales,/10,67|Anterior Responsable|30,92/);
+  assert.match(historicas,/10,67/);
+  assert.doesNotMatch(historicas,/20,25|Nuevo Ocupante/);
   assert.match(html,/10,67/);
   assert.match(html,/Anterior Responsable/);
-  assert.doesNotMatch(html,/Nuevo Ocupante/);
+  assert.match(actuales,/Nuevo Ocupante/);
   assert.doesNotMatch(html,/octubre de 2026<\/td>/);
 });
 
