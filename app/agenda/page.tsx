@@ -1,9 +1,5 @@
-"use client";
+import { redirect } from "next/navigation";
 
 export default function Agenda() {
-  return (
-    <>
-      <h1>Agenda</h1>
-    </>
-  );
+  redirect("/pagos-aplazados");
 }

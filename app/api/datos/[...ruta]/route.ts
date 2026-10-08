@@ -3,7 +3,7 @@ import { COOKIE_NAME, origenValido, sesionValida } from "@/lib/sesion";
 
 export const dynamic = "force-dynamic";
 const tablas = new Set(["viviendas", "habitaciones", "inquilinos", "estancias", "cobros", "movimientos_cobro", "fianzas", "fianza_cuotas", "gastos", "propietarios", "vivienda_propietarios", "inquilino_documentos", "clausulas_contrato", "mensajes_redes", "suplementos_estancia"]);
-const funciones = new Set(["roomflow_eliminar_cobro", "roomflow_eliminar_fianza_erronea"]);
+const funciones = new Set(["roomflow_eliminar_cobro", "roomflow_eliminar_fianza_erronea", "roomflow_crear_aplazamiento", "roomflow_pagar_aplazamiento"]);
 
 async function atender(request: NextRequest, context: { params: Promise<{ ruta: string[] }> }) {
   if (!sesionValida(request.cookies.get(COOKIE_NAME)?.value, process.env.ROOMFLOW_ACCESS_PASSWORD)) {
@@ -11,7 +11,9 @@ async function atender(request: NextRequest, context: { params: Promise<{ ruta: 
   }
   if (!origenValido(request)) return Response.json({ message: "Origen no autorizado." }, { status: 403 });
   const { ruta } = await context.params;
-  const rest = ruta.length === 3 && ruta[0] === "rest" && ruta[1] === "v1" && tablas.has(ruta[2]);
+  const rest = ruta.length === 3 && ruta[0] === "rest" && ruta[1] === "v1" && (
+    tablas.has(ruta[2]) || (ruta[2] === "pagos_aplazados" && ["GET", "HEAD", "PATCH"].includes(request.method))
+  );
   const rpc = ruta.length === 4 && ruta[0] === "rest" && ruta[1] === "v1" && ruta[2] === "rpc" && funciones.has(ruta[3]) && request.method === "POST";
   const storage = ruta[0] === "storage" && ruta[1] === "v1" && ruta[2] === "object" && (
     (ruta[3] === "sign" && ruta[4] === "documentos-inquilinos" && ruta.length > 5 && request.method === "POST") ||

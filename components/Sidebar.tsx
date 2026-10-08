@@ -63,8 +63,8 @@ const menu = [
     icon: MessageSquare,
   },
   {
-    name: "Agenda",
-    href: "/agenda",
+    name: "Pagos aplazados",
+    href: "/pagos-aplazados",
     icon: CalendarDays,
   },
 ];

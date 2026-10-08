@@ -138,9 +138,9 @@ export default function Header({ alAbrirMenu }: { alAbrirMenu: () => void }) {
           icono: <MessageSquare size={24} />,
         };
 
-      case "/agenda":
+      case "/pagos-aplazados":
         return {
-          titulo: "Agenda",
+          titulo: "Pagos aplazados",
           icono: <CalendarDays size={24} />,
         };
 
