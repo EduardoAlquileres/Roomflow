@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 
 import { supabase } from "#roomflow-supabase";
+import Link from "next/link";
+import { calcularResumenCobros, coincideEstadoCobro, type FiltroEstadoCobro } from "@/lib/clasificacionCobros";
 import {
   crearCobro,
   obtenerCobros,
@@ -40,6 +42,7 @@ type Resumen = {
   cobradas: number;
   pendientes: number;
   deudas: number;
+  aplazadas: number;
   habitacionesPendientes: number;
 };
 
@@ -49,22 +52,6 @@ const formatoKpiCobro = new Intl.NumberFormat("es-ES", {
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
 });
-
-function calcularResumen(cobros: Cobro[]): Resumen {
-  return {
-    previstas: cobros.reduce((suma, cobro) => suma + Number(cobro.total), 0),
-    cobradas: cobros.reduce((suma, cobro) => suma + Number(cobro.pagado), 0),
-    pendientes: cobros
-      .filter((cobro) => cobro.estado !== "DEUDA")
-      .reduce((suma, cobro) => suma + Number(cobro.pendiente), 0),
-    deudas: cobros
-      .filter((cobro) => cobro.estado === "DEUDA")
-      .reduce((suma, cobro) => suma + Number(cobro.pendiente), 0),
-    habitacionesPendientes: new Set(
-      cobros.filter((cobro) => cobro.estado !== "PAGADO" && cobro.estado !== "DEUDA").map((cobro) => cobro.habitacion_id)
-    ).size,
-  };
-}
 
 type Habitacion = {
   id: string;
@@ -92,8 +79,6 @@ type EstanciaResumen = {
   gastos: number;
   created_at: string;
 };
-
-type FiltroEstadoCobro = "ABIERTOS" | "" | Cobro["estado"];
 
 type Inquilino = {
   id: string;
@@ -139,6 +124,9 @@ async function eliminarCobroSeleccionado(id: string) {
   }
 }
   const [cobros, setCobros] = useState<Cobro[]>([]);
+  const [idsAplazados, setIdsAplazados] = useState<string[]>([]);
+  const cobrosAplazados = useMemo(() => new Set(idsAplazados), [idsAplazados]);
+  const [errorCarga, setErrorCarga] = useState("");
   const [filtroVivienda, setFiltroVivienda] = useState("");
   const [filtroHabitacion, setFiltroHabitacion] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstadoCobro>("ABIERTOS");
@@ -175,8 +163,7 @@ const [cobroEditando, setCobroEditando] = useState<Cobro | null>(null);
 
     if (filtroVivienda && habitacion?.vivienda_id !== filtroVivienda) return false;
     if (filtroHabitacion && cobro.habitacion_id !== filtroHabitacion) return false;
-    if (filtroEstado === "ABIERTOS" && (cobro.estado === "PAGADO" || cobro.estado === "DEUDA")) return false;
-    if (filtroEstado && filtroEstado !== "ABIERTOS" && cobro.estado !== filtroEstado) return false;
+    if (!coincideEstadoCobro(cobro, filtroEstado, cobrosAplazados)) return false;
 
     return true;
   });
@@ -184,12 +171,12 @@ const [cobroEditando, setCobroEditando] = useState<Cobro | null>(null);
   const periodoSeleccionado = periodosConCobros.includes(periodoResumen) ? periodoResumen : periodosConCobros[0] ?? periodoResumen;
   const [anioSeleccionado, mesSeleccionado] = periodoSeleccionado.split("-").map(Number);
   const cobrosDelMes = cobros.filter((cobro) => cobro.periodo_anio === anioSeleccionado && cobro.periodo_mes === mesSeleccionado);
-  const resumen = calcularResumen(cobrosDelMes);
+  const resumen = calcularResumenCobros(cobrosDelMes, cobrosAplazados);
   const anioActual = anioSeleccionado;
   const cobrosDelAnio = cobros.filter(
     (cobro) => cobro.periodo_anio === anioActual
   );
-  const resumenAnual = calcularResumen(cobrosDelAnio);
+  const resumenAnual = calcularResumenCobros(cobrosDelAnio, cobrosAplazados);
   const resumenViviendasMes = useMemo(() => {
     return viviendas.map((vivienda) => {
       const habitacionesVivienda = new Set(
@@ -205,10 +192,10 @@ const [cobroEditando, setCobroEditando] = useState<Cobro | null>(null);
       return {
         viviendaId: vivienda.id,
         nombre: vivienda.nombre,
-        ...calcularResumen(cobrosVivienda),
+        ...calcularResumenCobros(cobrosVivienda, cobrosAplazados),
       };
     });
-  }, [cobrosDelMes, habitaciones, viviendas]);
+  }, [cobrosDelMes, habitaciones, viviendas, cobrosAplazados]);
   const mesesConCobrosEnAnio = new Set(cobrosDelAnio.map((cobro) => cobro.periodo_mes)).size;
   const mediaMensualCobrada = resumenAnual.cobradas / Math.max(1, mesesConCobrosEnAnio);
   const cobradoPorMes = cobrosDelAnio.reduce<Record<number, number>>(
@@ -310,6 +297,8 @@ async function guardarPago(datos: {
 
   async function cargarDatos() {
     setCargando(true);
+    setErrorCarga("");
+    try {
 
     const avisos: string[] = [];
     try {
@@ -321,8 +310,11 @@ async function guardarPago(datos: {
     }
     setAvisoGeneracion(avisos.length ? avisos.join(" ") : null);
 
-    const listaCobros = await obtenerCobros();
-
+    const [listaCobros, acuerdosResultado] = await Promise.all([
+      obtenerCobros(), supabase.from("pagos_aplazados").select("cobro_id"),
+    ]);
+    if (acuerdosResultado.error) throw acuerdosResultado.error;
+    setIdsAplazados((acuerdosResultado.data ?? []).map(acuerdo => acuerdo.cobro_id));
     setCobros(listaCobros);
 
     const { data: habitacionesData } = await supabase
@@ -355,11 +347,15 @@ async function guardarPago(datos: {
     setGastosVivienda((gastosData ?? []) as GastoVivienda[]);
     setEstancias((estanciasData ?? []) as EstanciaResumen[]);
 
-    setCargando(false);
+    } catch (error) {
+      console.error("No se pudieron cargar los cobros", error);
+      setErrorCarga("No se pudieron actualizar los cobros y sus aplazamientos. Vuelve a cargar la página.");
+    } finally { setCargando(false); }
   }
 
   return (
     <>
+      {errorCarga && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">{errorCarga}</p>}
       <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:gap-4">
         <Wallet size={34} color="#2563eb" />
 
@@ -438,6 +434,12 @@ async function guardarPago(datos: {
       />
 
       <Tarjeta
+        titulo="Pago aplazado"
+        valor={formatoKpiCobro.format(resumen.aplazadas)}
+        icono={<Wallet size={22} color="#2563eb" />}
+      />
+
+      <Tarjeta
         titulo="Deuda no cobrada"
         valor={formatoKpiCobro.format(resumen.deudas)}
         icono={<AlertTriangle size={22} color="#7c3aed" />}
@@ -498,7 +500,8 @@ async function guardarPago(datos: {
    {vistaActiva === "COBROS" && <>
    <div style={{ marginBottom: 16 }}>
      <h2 style={{ margin: 0, fontSize: 20 }}>Listado de cobros</h2>
-     <p style={{ margin: "6px 0 0", color: "#64748b" }}>{filtroVivienda || filtroHabitacion ? "Historial de la selección: incluye también los cobros pagados." : "Vista de trabajo: solo pendientes y parciales. Selecciona una vivienda o habitación para consultar su historial."}</p>
+     <p style={{ margin: "6px 0 0", color: "#64748b" }}>{filtroVivienda || filtroHabitacion ? "Historial de la selección: incluye los cobros pagados y los aplazados, identificados como tales." : "Vista de trabajo: pendientes y parciales sin acuerdo de aplazamiento. Selecciona una vivienda o habitación para consultar su historial."}</p>
+     <Link href="/pagos-aplazados" className="mt-2 inline-block text-sm font-semibold text-blue-600">Gestionar las entregas de pagos aplazados</Link>
    </div>
    <div className="mb-5 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
      <label className="flex min-w-52 flex-1 flex-col gap-1 text-sm font-medium text-slate-700 max-sm:min-w-0 max-sm:flex-none max-sm:w-full">
@@ -569,6 +572,7 @@ async function guardarPago(datos: {
    </div>
    <CobrosTable
   cobros={cobrosFiltrados}
+  cobrosAplazados={cobrosAplazados}
   habitaciones={habitaciones}
   viviendas={viviendas}
   inquilinos={inquilinos}
@@ -714,6 +718,7 @@ function PanelCobrosPorVivienda({ viviendas }: { viviendas: ResumenViviendaMes[]
               <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Previsto</span><strong className="text-slate-900">{formatoKpiCobro.format(vivienda.previstas)}</strong></div>
               <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Cobrado</span><strong className="text-green-700">{formatoKpiCobro.format(vivienda.cobradas)}</strong></div>
               <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2"><span className="font-medium text-slate-600">Pendiente</span><strong className={vivienda.pendientes > 0 ? "text-red-600" : "text-slate-900"}>{formatoKpiCobro.format(vivienda.pendientes)}</strong></div>
+              {vivienda.aplazadas > 0 && <div className="flex items-center justify-between gap-3"><span className="font-medium text-slate-600">Pago aplazado</span><strong className="text-blue-600">{formatoKpiCobro.format(vivienda.aplazadas)}</strong></div>}
               <div className="flex items-center justify-between gap-3"><span className="font-medium text-slate-600">Deuda no cobrada</span><strong className={vivienda.deudas > 0 ? "text-violet-700" : "text-slate-900"}>{formatoKpiCobro.format(vivienda.deudas)}</strong></div>
             </div>
           </article>

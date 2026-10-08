@@ -1,6 +1,7 @@
 "use client";
 
 import { Euro, History, Landmark, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { Cobro } from "@/types/cobro";
 import ReciboCobroButton from "@/components/ReciboCobroButton";
 import WhatsAppPendientesButton from "@/components/WhatsAppPendientesButton";
@@ -11,6 +12,7 @@ type Inquilino = { id: string; nombre: string; apellidos: string; telefono: stri
 
 type Props = {
   cobros: Cobro[];
+  cobrosAplazados?: ReadonlySet<string>;
   habitaciones: Habitacion[];
   viviendas: Vivienda[];
   inquilinos: Inquilino[];
@@ -23,7 +25,7 @@ type Props = {
 
 const formatoMoneda = (importe: number) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(importe);
 
-export default function CobrosTable({ cobros, habitaciones, viviendas, inquilinos, onRegistrarPago, onVerHistorial, onEditar, onEliminar, onMarcarDeuda }: Props) {
+export default function CobrosTable({ cobros, cobrosAplazados, habitaciones, viviendas, inquilinos, onRegistrarPago, onVerHistorial, onEditar, onEliminar, onMarcarDeuda }: Props) {
   const obtenerHabitacion = (id: string) => habitaciones.find((habitacion) => habitacion.id === id) ?? null;
   const obtenerVivienda = (idHabitacion: string) => {
     const habitacion = obtenerHabitacion(idHabitacion);
@@ -34,12 +36,13 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
   const nombreMes = (mes: number) => ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"][mes - 1];
 
   function acciones(cobro: Cobro, vivienda: Vivienda | null, habitacion: Habitacion | null, inquilino: Inquilino | null) {
+    const aplazado = cobrosAplazados?.has(cobro.id) && Number(cobro.pendiente) > 0;
     return (
       <div className="flex flex-wrap gap-2">
-        <button style={boton} title="Registrar pago" aria-label="Registrar pago" onClick={() => onRegistrarPago?.(cobro)}><Euro size={18} /></button>
+        {aplazado ? <Link href="/pagos-aplazados" style={boton} title="Registrar entrega en Pagos aplazados" aria-label="Registrar entrega en Pagos aplazados"><Euro size={18} /></Link> : <button style={boton} title="Registrar pago" aria-label="Registrar pago" onClick={() => onRegistrarPago?.(cobro)}><Euro size={18} /></button>}
         <button style={boton} title="Historial" aria-label="Ver historial" onClick={() => onVerHistorial?.(cobro)}><History size={18} /></button>
         <ReciboCobroButton cobro={cobro} vivienda={vivienda} habitacion={habitacion} inquilino={inquilino} />
-        {inquilino && cobro.estado !== "PAGADO" && (
+        {inquilino && cobro.estado !== "PAGADO" && !aplazado && (
           <WhatsAppPendientesButton
             inquilinoId={inquilino.id}
             habitacionId={cobro.habitacion_id}
@@ -48,7 +51,7 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
           />
         )}
         <button style={boton} title="Editar cobro" aria-label="Editar cobro" onClick={() => onEditar?.(cobro)}><Pencil size={18} /></button>
-        {cobro.estado !== "PAGADO" && cobro.estado !== "DEUDA" && <button style={boton} title="Marcar saldo como deuda" aria-label="Marcar saldo como deuda" onClick={() => onMarcarDeuda?.(cobro)}><Landmark size={18} /></button>}
+        {cobro.estado !== "PAGADO" && cobro.estado !== "DEUDA" && !aplazado && <button style={boton} title="Marcar saldo como deuda" aria-label="Marcar saldo como deuda" onClick={() => onMarcarDeuda?.(cobro)}><Landmark size={18} /></button>}
         <button style={boton} title="Eliminar cobro" aria-label="Eliminar cobro" onClick={() => onEliminar?.(cobro.id)}><Trash2 size={18} /></button>
       </div>
     );
@@ -82,7 +85,7 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
                 <td style={td}>{formatoMoneda(Number(cobro.total))}</td>
                 <td style={td}>{formatoMoneda(Number(cobro.pagado))}</td>
                 <td style={td}>{formatoMoneda(Number(cobro.pendiente))}</td>
-                <td style={td}><span style={estadoBadge(cobro.estado)}>{nombreEstado(cobro.estado)}</span></td>
+                <td style={td}><span style={estadoBadge(cobro.estado)}>{cobrosAplazados?.has(cobro.id) && Number(cobro.pendiente) > 0 ? "Aplazado" : nombreEstado(cobro.estado)}</span></td>
                 <td style={td}>{acciones(cobro, vivienda, habitacion, inquilino)}</td>
               </tr>;
             })}
@@ -103,7 +106,7 @@ export default function CobrosTable({ cobros, habitaciones, viviendas, inquilino
                   <p className="mt-1 text-sm text-slate-500">{vivienda?.nombre ?? "-"} · Habitación {habitacion?.codigo ?? "-"}</p>
                   <p className="mt-1 text-sm text-slate-700">{inquilino ? `${inquilino.nombre} ${inquilino.apellidos}` : "Sin inquilino"}</p>
                 </div>
-                <span style={estadoBadge(cobro.estado)}>{nombreEstado(cobro.estado)}</span>
+                <span style={estadoBadge(cobro.estado)}>{cobrosAplazados?.has(cobro.id) && Number(cobro.pendiente) > 0 ? "Aplazado" : nombreEstado(cobro.estado)}</span>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2 rounded-lg bg-slate-50 p-3 text-sm">
                 <Importe titulo="Alquiler" valor={formatoMoneda(Number(cobro.alquiler))} />

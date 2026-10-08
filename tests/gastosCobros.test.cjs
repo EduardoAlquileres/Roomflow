@@ -13,6 +13,7 @@ function cargar(ruta, dependencias = {}) {
   return modulo.exports;
 }
 const economia = cargar('lib/estanciasCobros.ts');
+const aplazamientoRecibo = cargar('lib/aplazamientoRecibo.ts');
 const estancia = { id: 'e1', inquilino_id: 'i1', habitacion_id: 'h7', fecha_entrada: '2026-08-01', fecha_salida: null, precio: 550, gastos: 50, created_at: '2026-08-01' };
 
 test('35 por persona sustituye a 50 en el mes actual y futuro, conservando el histórico', () => {
@@ -52,7 +53,7 @@ test('el cobro automático de dos titulares usa la tarifa de la habitación y se
 test('el PDF conserva los importes del cobro y no inventa el pago eliminado', async () => {
   let html;
   const supabase = baseSimulada({ estancias: [estancia], habitaciones: { id: 'h7', codigo: 'H7', vivienda_id: 'v', gastos: 99 }, viviendas: { id: 'v', nombre: 'Montuïri' }, inquilinos: [{ id: 'i1', nombre: 'Prueba', apellidos: 'Prueba', documento: '' }] });
-  const Componente = cargar('components/ReciboCobroButton.tsx', { '#roomflow-supabase': { supabase }, '@/lib/estanciasCobros': economia, '@/lib/reciboPdf': { descargarReciboPdf: contenido => { html = contenido; } } }).default;
+  const Componente = cargar('components/ReciboCobroButton.tsx', { '#roomflow-supabase': { supabase }, '@/lib/estanciasCobros': economia, '@/lib/aplazamientoRecibo': aplazamientoRecibo, '@/lib/reciboPdf': { descargarReciboPdf: contenido => { html = contenido; } } }).default;
   const boton = Componente({ cobro: { inquilino_id: 'i1', habitacion_id: 'h7', periodo_anio: 2026, periodo_mes: 9, alquiler: 550, gastos: 70, pagado: 0 }, vivienda: { id: 'v', nombre: 'Montuïri' }, habitacion: { codigo: 'H7' }, inquilino: null });
   await boton.props.onClick();
   const euros = n => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n);

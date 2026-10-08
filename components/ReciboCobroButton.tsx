@@ -5,6 +5,8 @@ import { descargarReciboPdf } from "@/lib/reciboPdf";
 import { Cobro } from "@/types/cobro";
 import { supabase } from "#roomflow-supabase";
 import { EstanciaEconomica, estanciaParaPeriodo, estanciasDelContrato } from "@/lib/estanciasCobros";
+import { referenciaAplazamientoRecibo } from "@/lib/aplazamientoRecibo";
+import type { PagoAplazado } from "@/lib/pagosAplazados";
 
 type Props = {
   cobro: Cobro;
@@ -22,8 +24,20 @@ type CuotaFianzaDocumento = { fecha_prevista: string; importe: number; importe_p
 const moneda = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 const escapar = (texto: string) => texto.replace(/[&<>'"]/g, (caracter) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#039;", '"': "&quot;" })[caracter] ?? caracter);
 
-export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquilino }: Props) {
+export default function ReciboCobroButton({ cobro: cobroInicial, vivienda, habitacion, inquilino }: Props) {
   async function generar() {
+    let cobro = cobroInicial;
+    const { data: acuerdos, error: errorAcuerdo } = await supabase
+      .from("pagos_aplazados").select("*").eq("cobro_id", cobro.id).limit(1);
+    if (errorAcuerdo) { alert(`No se pudo comprobar el aplazamiento de este recibo: ${errorAcuerdo.message}`); return; }
+    const acuerdo = (acuerdos?.[0] ?? null) as PagoAplazado | null;
+    if (acuerdo) {
+      // Puede haberse recibido una entrega desde Pagos aplazados con Cobros abierto.
+      const { data: actualizado, error } = await supabase.from("cobros").select("*").eq("id", cobro.id).single();
+      if (error) { alert(error.message); return; }
+      cobro = actualizado as Cobro;
+    }
+    const bloqueAplazamiento = referenciaAplazamientoRecibo(acuerdo, cobro);
     const { data: estanciasData, error: errorEstancias } = await supabase
       .from("estancias")
       .select("id, inquilino_id, habitacion_id, fecha_entrada, fecha_salida, precio, gastos, created_at");
@@ -107,8 +121,11 @@ export default function ReciboCobroButton({ cobro, vivienda, habitacion, inquili
     const pendiente = Math.max(total - pagado, 0);
     const mes = new Intl.DateTimeFormat("es-ES", { month: "long", year: "numeric" }).format(new Date(cobro.periodo_anio, cobro.periodo_mes - 1, 1));
     const fecha = new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", year: "numeric" }).format(new Date());
+    const recordatorio = bloqueAplazamiento
+      ? "Las entregas de este recibo se realizan según el acuerdo de pago aplazado indicado."
+      : "Recuerda que los pagos deben efectuarse entre los días 1 y 5 de cada mes.";
 
-    const documento = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recibo ${cobro.periodo_mes}-${cobro.periodo_anio}</title></head><body><div class="cabecera"><div><div class="titulo">RECIBO DE PAGO</div><div class="meta" style="text-align:left">Recibo mensual de habitación</div></div><div class="meta">Fecha de emisión: ${fecha}<br>Periodo: ${escapar(mes)}</div></div><div class="bloque"><div class="etiqueta">Propietario(s)</div><div class="valor">${escapar(listaPropietarios)}</div></div><div class="bloque"><div class="etiqueta">Inquilino(s)</div><div class="valor">${escapar(listaInquilinos)}</div></div><div class="bloque"><div class="etiqueta">Vivienda y habitación</div><div class="valor">${escapar(viviendaRecibo.nombre)}${viviendaRecibo.direccion ? ` · ${escapar(viviendaRecibo.direccion)}` : ""}<br>Habitación: ${escapar(codigoHabitacion)}</div></div><div class="bloque"><div class="etiqueta">Desglose correspondiente a ${escapar(mes)}</div><div class="fila"><span>Alquiler de habitación</span><strong>${moneda.format(alquiler)}</strong></div><div class="fila"><span>Gastos facturados</span><strong>${moneda.format(gastos)}</strong></div>${filasSuplementos}<div class="fila total"><span>Total mensual</span><span>${moneda.format(total)}</span></div><div class="fila"><span>Importe recibido</span><strong>${moneda.format(pagado)}</strong></div><div class="fila"><span>Importe pendiente</span><strong>${moneda.format(pendiente)}</strong></div></div><div class="recordatorio">Recuerda que los pagos deben efectuarse entre los días 1 y 5 de cada mes.</div>${bloqueFianza}</body></html>`;
+    const documento = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recibo ${cobro.periodo_mes}-${cobro.periodo_anio}</title></head><body><div class="cabecera"><div><div class="titulo">RECIBO DE PAGO</div><div class="meta" style="text-align:left">Recibo mensual de habitación</div></div><div class="meta">Fecha de emisión: ${fecha}<br>Periodo: ${escapar(mes)}</div></div><div class="bloque"><div class="etiqueta">Propietario(s)</div><div class="valor">${escapar(listaPropietarios)}</div></div><div class="bloque"><div class="etiqueta">Inquilino(s)</div><div class="valor">${escapar(listaInquilinos)}</div></div><div class="bloque"><div class="etiqueta">Vivienda y habitación</div><div class="valor">${escapar(viviendaRecibo.nombre)}${viviendaRecibo.direccion ? ` · ${escapar(viviendaRecibo.direccion)}` : ""}<br>Habitación: ${escapar(codigoHabitacion)}</div></div><div class="bloque"><div class="etiqueta">Desglose correspondiente a ${escapar(mes)}</div><div class="fila"><span>Alquiler de habitación</span><strong>${moneda.format(alquiler)}</strong></div><div class="fila"><span>Gastos facturados</span><strong>${moneda.format(gastos)}</strong></div>${filasSuplementos}<div class="fila total"><span>Total mensual</span><span>${moneda.format(total)}</span></div><div class="fila"><span>Importe recibido</span><strong>${moneda.format(pagado)}</strong></div><div class="fila"><span>Importe pendiente</span><strong>${moneda.format(pendiente)}</strong></div></div><div class="recordatorio">${recordatorio}</div>${bloqueAplazamiento}${bloqueFianza}</body></html>`;
 
     descargarReciboPdf(documento, `Recibo-${cobro.periodo_mes}-${cobro.periodo_anio}.pdf`);
   }

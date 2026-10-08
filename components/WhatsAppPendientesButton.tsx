@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MessageCircle, Users } from "lucide-react";
 import { supabase } from "#roomflow-supabase";
+import { cobrosSinAplazamiento } from "@/lib/clasificacionCobros";
 
 type Props = {
   inquilinoId: string;
@@ -19,6 +20,7 @@ type Destinatario = {
 };
 
 type CobroPendiente = {
+  id: string;
   periodo_anio: number;
   periodo_mes: number;
   pendiente: number;
@@ -50,10 +52,10 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
 
     setPreparando(true);
     try {
-      const [respuestaCobros, respuestaFianzas, respuestaInquilinos] = await Promise.all([
+      const [respuestaCobros, respuestaFianzas, respuestaInquilinos, respuestaAplazados] = await Promise.all([
         supabase
           .from("cobros")
-          .select("periodo_anio, periodo_mes, pendiente")
+          .select("id, periodo_anio, periodo_mes, pendiente")
           .eq("inquilino_id", inquilinoId)
           .in("estado", ["PENDIENTE", "PARCIAL", "DEUDA"])
           .gt("pendiente", 0)
@@ -70,12 +72,14 @@ export default function WhatsAppPendientesButton({ inquilinoId, habitacionId, no
           .eq("habitacion_id", habitacionId)
           .eq("activo", true)
           .order("created_at"),
+        supabase.from("pagos_aplazados").select("cobro_id"),
       ]);
 
-      const error = respuestaCobros.error ?? respuestaFianzas.error ?? respuestaInquilinos.error;
+      const error = respuestaCobros.error ?? respuestaFianzas.error ?? respuestaInquilinos.error ?? respuestaAplazados.error;
       if (error) throw error;
 
-      const cobros = (respuestaCobros.data ?? []) as CobroPendiente[];
+      const aplazados = new Set((respuestaAplazados.data ?? []).map(acuerdo => acuerdo.cobro_id));
+      const cobros = cobrosSinAplazamiento((respuestaCobros.data ?? []) as CobroPendiente[], aplazados);
       const fianzas = (respuestaFianzas.data ?? []) as FianzaPendiente[];
       const pendienteCobros = cobros.reduce((total, cobro) => total + Number(cobro.pendiente), 0);
       const pendienteFianza = fianzas.reduce(
