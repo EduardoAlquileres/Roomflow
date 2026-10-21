@@ -22,7 +22,7 @@ alter table public.cobros add column if not exists detalle_suplementos jsonb not
 
 -- Fechas inclusivas. El puntual se cobra una sola vez, en su mes de inicio.
 create or replace function public.roomflow_importe_suplemento(importe numeric, modalidad text, inicio date, fin date, prorratear boolean, entrada date, salida date, periodo date)
-returns numeric language sql immutable as $$
+returns numeric language sql immutable set search_path = pg_catalog as $$
   select case
     when least(coalesce(fin,'9999-12-31'::date),coalesce(salida,'9999-12-31'::date),(periodo + interval '1 month - 1 day')::date) < greatest(inicio,entrada,periodo) then 0
     when modalidad = 'PUNTUAL' then case when inicio >= entrada and (salida is null or inicio <= salida) and date_trunc('month',inicio)::date = periodo then importe else 0 end
