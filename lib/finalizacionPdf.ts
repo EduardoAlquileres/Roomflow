@@ -6,7 +6,7 @@ export type DatosFinalizacion = {
   pendientes: { periodo: string; importe: number }[]; observaciones: string;
 };
 
-export function crearFinalizacionPdf(datos: DatosFinalizacion, hoy = new Date()) {
+export function crearFinalizacionPdf(datos: DatosFinalizacion, hoy = new Date(), plantilla = false) {
   const pdf = new jsPDF();
   pdf.setProperties({ title: "Finalización del contrato de habitación", author: "", creator: "" });
   let y = 20;
@@ -22,12 +22,13 @@ export function crearFinalizacionPdf(datos: DatosFinalizacion, hoy = new Date())
   function seccion(t: string) { espacio(25); y += 3; texto(t, 11, true); }
   texto("FINALIZACIÓN DEL CONTRATO", 17, true);
   texto("Arrendamiento de habitación", 12);
-  texto("Fecha de preparación: " + new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid" }).format(hoy), 9);
+  if (plantilla) texto("PLANTILLA · Campos pendientes de completar", 10, true);
+  else texto("Fecha de preparación: " + new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid" }).format(hoy), 9);
   seccion("1. Partes y habitación");
   texto("Parte arrendadora: " + (datos.propietarios.join("; ") || "________________________________ (completar)"));
   texto("Parte arrendataria: " + datos.titulares.join("; "));
   texto("Vivienda: " + datos.vivienda + ". Habitación: " + datos.habitacion + ".");
-  texto("Inicio de la estancia: " + fecha(datos.entrada) + ". Fecha de finalización: " + fecha(datos.salida) + ".");
+  texto("Inicio de la estancia: " + (plantilla ? "[FECHA DE ENTRADA]" : fecha(datos.entrada)) + ". Fecha de finalización: " + (plantilla ? "[FECHA DE FINALIZACIÓN]" : fecha(datos.salida)) + ".");
   seccion("2. Finalización y entrega");
   texto("Las partes, mediante su firma, dejan constancia de la finalización del arrendamiento de la habitación indicada con efectos en la fecha de finalización anterior.");
   texto("Entrega de llaves (completar al firmar): fecha ______________; número de juegos ______.");
@@ -35,7 +36,8 @@ export function crearFinalizacionPdf(datos: DatosFinalizacion, hoy = new Date())
   seccion("3. Fianza");
   datos.fianza.forEach(t => texto(t));
   seccion("4. Liquidación de alquiler y gastos");
-  if (datos.pendientes.length) {
+  if (plantilla) texto("[PERIODOS E IMPORTES PENDIENTES, SI PROCEDE]. Total pendiente: [IMPORTE].");
+  else if (datos.pendientes.length) {
     datos.pendientes.forEach(c => texto(c.periodo + ": " + euros(c.importe) + " pendiente."));
     texto("Total pendiente registrado: " + euros(Math.round(datos.pendientes.reduce((s,c) => s+c.importe,0)*100)/100), 11, true);
   } else texto("No constan saldos pendientes en los cobros registrados de esta estancia a la fecha de preparación.");
