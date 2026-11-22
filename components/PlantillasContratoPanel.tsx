@@ -14,6 +14,10 @@ export default function PlantillasContratoPanel({ clausulas }: { clausulas: Clau
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
+  useEffect(() => {
+    if (seleccion) dialogo.current?.showModal();
+    else dialogo.current?.close();
+  }, [seleccion]);
   const plantilla = plantillasContrato.find(p => p.id === seleccion);
   const html = seleccion && seleccion !== "finalizacion" ? vistaPreviaPlantilla(seleccion, clausulas, varios) : "";
 
@@ -36,9 +40,8 @@ export default function PlantillasContratoPanel({ clausulas }: { clausulas: Clau
       } finally { setCargando(false); }
     }
     setSeleccion(id);
-    dialogo.current?.showModal();
   }
-  function cerrar() { dialogo.current?.close(); }
+  function cerrar() { setSeleccion(null); }
   function imprimir() {
     const ventana = window.open("", "_blank");
     if (!ventana) { setError("Permite las ventanas emergentes para imprimir la plantilla."); return; }
@@ -62,7 +65,7 @@ export default function PlantillasContratoPanel({ clausulas }: { clausulas: Clau
       </article>)}
     </div>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-    <dialog ref={dialogo} aria-labelledby="vista-plantilla-titulo" onClose={() => { setSeleccion(null); setPdfUrl(""); }} className="fixed inset-0 m-auto h-[92dvh] max-h-none w-[min(1100px,96vw)] max-w-none overflow-hidden rounded-2xl bg-white p-0 shadow-xl backdrop:bg-slate-950/60">
+    <dialog ref={dialogo} aria-labelledby="vista-plantilla-titulo" onClose={() => { if (!dialogo.current?.open) { setSeleccion(null); setPdfUrl(""); } }} className="fixed inset-0 m-auto h-[92dvh] max-h-none w-[min(1100px,96vw)] max-w-none overflow-hidden rounded-2xl bg-white p-0 shadow-xl backdrop:bg-slate-950/60">
       <div className="flex h-full flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
           <div><h2 id="vista-plantilla-titulo" className="font-bold text-slate-900">{plantilla?.nombre}</h2><p className="mt-1 text-xs text-slate-600">Modelo de consulta · completa los datos reales desde la habitación.</p></div>
